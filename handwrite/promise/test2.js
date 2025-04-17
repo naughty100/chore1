@@ -1,3 +1,5 @@
+const MyPromise = require('./index')
+
 // 测试状态锁定
 const p1 = new MyPromise((resolve) => {
     resolve(1)

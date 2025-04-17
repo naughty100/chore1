@@ -88,4 +88,37 @@ module.exports = class MyPromise {
             }
         );
     }
+
+    static race(promises){
+        return new MyPromise((resolve,reject)=>{
+            promises.forEach(promise=>{
+                promise.then(resolve,reject)
+            })
+        })
+    }
+
+    static all(promises){
+        return new MyPromise((resolve,reject)=>{
+            const results = new Array(promises.length)
+            let completed = 0;
+
+            if(promises.length === 0){
+                resolve([])
+                return
+            }
+
+            promises.forEach((promise,index)=>{
+                promise.then(value=>{
+                    results[index] = value;
+                    completed++;
+                    if(completed === promises.length){
+                        resolve(results)
+                    }
+                },reason=>{
+                    reject(reason)
+                })
+            })
+                
+        })
+    }
 }

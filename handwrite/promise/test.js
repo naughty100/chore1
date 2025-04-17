@@ -2,7 +2,8 @@ const MyPromise = require('./index')
 
 // 测试用例 1: 基本功能
 const promise1 = new MyPromise((resolve, reject) => {
-    setTimeout(() => resolve('成功'), 1000);
+    // setTimeout(() => resolve('成功'), 1000);
+    resolve('成功')
 });
 
 promise1.then((value) => {
