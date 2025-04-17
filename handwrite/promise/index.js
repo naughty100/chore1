@@ -49,15 +49,18 @@ module.exports = class MyPromise {
             }
 
             const handleRejected = () => {
-                try {
-                    const x = typeof onRejected === 'function'
-                        ? onRejected(this.reason)
-                        : this.reason
-                    resolve(x)
-                } catch (error) {
-                    reject(error)
+                if (typeof onRejected !== 'function') {
+                    // 穿透错误
+                    reject(this.reason);
+                    return;
                 }
-            }
+                try {
+                    const x = onRejected(this.reason);
+                    resolve(x);
+                } catch (error) {
+                    reject(error);
+                }
+            };
 
             if (this.status === FULFILLED) {
                 setTimeout(handleFulfilled, 0)
