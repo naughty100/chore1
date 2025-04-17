@@ -10,29 +10,29 @@ module.exports = class MyPromise {
         this.onFulfilledCallbacks = []
         this.onRejectedCallbacks = []
 
-        try {
-            fn(this.resolve.bind(this), this.reject.bind(this))
-        } catch (error) {
-            this.reject(error)
+        const resolve = (value) => {
+            if (this.status !== PENDING) return
+            this.status = FULFILLED
+            this.value = value
+            this.onFulfilledCallbacks.forEach(callback => {
+                setTimeout(() => callback(this.value), 0)
+            })
         }
-    }
+    
+        const reject = (reason) => {
+            if (this.status !== PENDING) return
+            this.status = REJECTED
+            this.reason = reason
+            this.onRejectedCallbacks.forEach(callback => {
+                setTimeout(() => callback(this.reason), 0)
+            })
+        }
 
-    resolve(value) {
-        if (this.status !== PENDING) return
-        this.status = FULFILLED
-        this.value = value
-        this.onFulfilledCallbacks.forEach(callback => {
-            setTimeout(() => callback(this.value), 0)
-        })
-    }
-
-    reject(reason) {
-        if (this.status !== PENDING) return
-        this.status = REJECTED
-        this.reason = reason
-        this.onRejectedCallbacks.forEach(callback => {
-            setTimeout(() => callback(this.reason), 0)
-        })
+        try {
+            fn(resolve, reject)
+        } catch (error) {
+            reject(error)
+        }
     }
 
     then(onFulfilled, onRejected) {
@@ -50,7 +50,6 @@ module.exports = class MyPromise {
 
             const handleRejected = () => {
                 if (typeof onRejected !== 'function') {
-                    // 穿透错误
                     reject(this.reason);
                     return;
                 }
