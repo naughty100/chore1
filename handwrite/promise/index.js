@@ -7,83 +7,69 @@ module.exports = class MyPromise {
         this.status = PENDING
         this.value = null
         this.reason = null
-        this.onFulfilledCallbacks=[]
-        this.onRejectedCallbacks=[]
+        this.onFulfilledCallbacks = []
+        this.onRejectedCallbacks = []
 
-        fn(this.resolve.bind(this),this.reject.bind(this))
-    }
-
-    resolve(value){
-        if(this.status === PENDING){
-            this.status = FULFILLED
-            this.value = value
-            this.onFulfilledCallbacks.forEach(callback=> {
-                setTimeout(()=>{
-                    callback(value)
-                },0)
-            })
+        try {
+            fn(this.resolve.bind(this), this.reject.bind(this))
+        } catch (error) {
+            this.reject(error)
         }
     }
 
-
-    reject(reason){
-        if(this.status === PENDING){
-            this.status = REJECTED
-            this.reason = reason
-            this.onRejectedCallbacks.forEach(callback=> {
-                setTimeout(()=>{
-                    callback(reason)
-                },0)
-            })
-        }
+    resolve(value) {
+        if (this.status !== PENDING) return
+        this.status = FULFILLED
+        this.value = value
+        this.onFulfilledCallbacks.forEach(callback => {
+            setTimeout(() => callback(this.value), 0)
+        })
     }
 
-    then(onFulfilled,onRejected){
-        return new MyPromise((resolve,reject)=>{
-            const handleFulfilled = value => {
+    reject(reason) {
+        if (this.status !== PENDING) return
+        this.status = REJECTED
+        this.reason = reason
+        this.onRejectedCallbacks.forEach(callback => {
+            setTimeout(() => callback(this.reason), 0)
+        })
+    }
+
+    then(onFulfilled, onRejected) {
+        const newPromise = new MyPromise((resolve, reject) => {
+            const handleFulfilled = () => {
                 try {
-                    if(typeof onFulfilled == 'function'){
-                        resolve(onFulfilled(value))
-                    }else {
-                        reject(value)
-                    }
+                    const x = typeof onFulfilled === 'function' 
+                        ? onFulfilled(this.value) 
+                        : this.value
+                    resolve(x)
                 } catch (error) {
                     reject(error)
                 }
             }
 
-            const handleRejected = reason => {
+            const handleRejected = () => {
                 try {
-                    if(typeof onRejected == 'function'){
-                        resolve(onRejected(reason))
-                    }else {
-                        reject(reason)
-                    }
+                    const x = typeof onRejected === 'function'
+                        ? onRejected(this.reason)
+                        : this.reason
+                    resolve(x)
                 } catch (error) {
                     reject(error)
                 }
             }
 
-            if(this.status === PENDING){
+            if (this.status === FULFILLED) {
+                setTimeout(handleFulfilled, 0)
+            } else if (this.status === REJECTED) {
+                setTimeout(handleRejected, 0)
+            } else {
                 this.onFulfilledCallbacks.push(handleFulfilled)
                 this.onRejectedCallbacks.push(handleRejected)
             }
-
-            if(this.status === FULFILLED){
-                setTimeout(()=>{
-                    const result = handleFulfilled(this.value)
-                    resolve(result)
-                },0)
-
-            }
-
-            if(this.status === REJECTED){
-                setTimeout(()=>{
-                    const result = handleRejected(this.reason)
-                    resolve(result)
-                },0)
-            }
         })
+        
+        return newPromise
     }
 
     catch(onRejected){
