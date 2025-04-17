@@ -1,9 +1,8 @@
-
 const PENDING = 'pending'
 const FULFILLED = 'fulfilled'
 const REJECTED = 'rejected'
 
-export const MyPromise = class {
+module.exports = class MyPromise {
     constructor(fn) {
         this.status = PENDING
         this.value = null
@@ -42,18 +41,26 @@ export const MyPromise = class {
     then(onFulfilled,onRejected){
         return new MyPromise((resolve,reject)=>{
             const handleFulfilled = value => {
-                if(typeof onFulfilled !== 'function'){
-                    resolve(onFulfilled(value))
-                }else {
-                    reject(value)
+                try {
+                    if(typeof onFulfilled == 'function'){
+                        resolve(onFulfilled(value))
+                    }else {
+                        reject(value)
+                    }
+                } catch (error) {
+                    reject(error)
                 }
             }
 
             const handleRejected = reason => {
-                if(typeof onRejected !== 'function'){
-                    reject(onRejected(reason))
-                }else {
-                    reject(reason)
+                try {
+                    if(typeof onRejected == 'function'){
+                        resolve(onRejected(reason))
+                    }else {
+                        reject(reason)
+                    }
+                } catch (error) {
+                    reject(error)
                 }
             }
 
@@ -83,7 +90,16 @@ export const MyPromise = class {
         return this.then(null,onRejected)
     }
 
-    finally(onFinally){
-        return this.then(onFinally,onFinally)
+    finally(onFinally) {
+        return this.then(
+            value => {
+                onFinally();
+                return value;
+            },
+            reason => {
+                onFinally();
+                throw reason;
+            }
+        );
     }
 }

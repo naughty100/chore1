@@ -1,3 +1,5 @@
+const MyPromise = require('./index')
+
 // 测试用例 1: 基本功能
 const promise1 = new MyPromise((resolve, reject) => {
     setTimeout(() => resolve('成功'), 1000);
@@ -28,6 +30,9 @@ promise3
     })
     .then((value) => {
         console.log(value); // 应该输出 2
+        return value + 1;
+    }).then((value)=>{
+        console.log(value); // 应该输出 3
     });
 
 // 测试用例 4: finally
