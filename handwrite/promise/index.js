@@ -92,7 +92,11 @@ module.exports = class MyPromise {
     static race(promises){
         return new MyPromise((resolve,reject)=>{
             promises.forEach(promise=>{
-                promise.then(resolve,reject)
+                promise.then(value=>{
+                    resolve(value)
+                },reason=>{
+                    reject(reason)
+                })
             })
         })
     }
