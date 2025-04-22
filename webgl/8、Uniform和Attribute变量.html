@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - Uniform和Attribute变量</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin: 10px;
+        }
+
+        .description {
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        label {
+            margin-right: 10px;
+            min-width: 100px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+            margin-right: 10px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+        }
+
+        input[type="color"] {
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        select {
+            padding: 5px;
+            margin-right: 10px;
+        }
+
+        code {
+            font-family: Consolas, monospace;
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .code-block {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow-x: auto;
+            border-left: 4px solid #2196F3;
+        }
+
+        pre {
+            margin: 0;
+            font-family: Consolas, monospace;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - Uniform和Attribute变量</h1>
+
+    <div class="container">
+        <div class="description">
+            <p>本案例展示了WebGL着色器中的Uniform和Attribute变量的使用：</p>
+            <ul>
+                <li>理解Uniform和Attribute的区别和作用</li>
+                <li>学习如何向着色器传递不同类型的变量</li>
+                <li>使用Uniform变量控制动画效果</li>
+                <li>了解如何传递和使用向量和矩阵类型</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>绘制对象控制</h3>
+                <div class="control-row">
+                    <label for="shapeSelect">绘制形状：</label>
+                    <select id="shapeSelect">
+                        <option value="triangle">三角形</option>
+                        <option value="square">正方形</option>
+                        <option value="circle">圆形</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Uniform变量控制</h3>
+                <div class="control-row">
+                    <label for="timeFactorRange">时间因子：</label>
+                    <input type="range" id="timeFactorRange" min="0" max="2" step="0.01" value="1">
+                    <input type="number" id="timeFactorValue" min="0" max="2" step="0.01" value="1">
+                </div>
+                <div class="control-row">
+                    <label for="colorPicker">全局颜色：</label>
+                    <input type="color" id="colorPicker" value="#3388ff">
+                </div>
+                <div class="control-row">
+                    <label for="scaleRange">缩放比例：</label>
+                    <input type="range" id="scaleRange" min="0.1" max="2" step="0.05" value="1">
+                    <input type="number" id="scaleValue" min="0.1" max="2" step="0.05" value="1">
+                </div>
+                <div class="control-row">
+                    <button id="animateButton">启动/停止动画</button>
+                    <button id="resetButton">重置控制</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="glCanvas" width="600" height="400">
+            您的浏览器不支持HTML5 Canvas元素
+        </canvas>
+    </div>
+
+    <div class="container">
+        <div class="description">
+            <h3>Uniform和Attribute变量的区别</h3>
+            <table>
+                <tr>
+                    <th>特性</th>
+                    <th>Uniform变量</th>
+                    <th>Attribute变量</th>
+                </tr>
+                <tr>
+                    <td>数据范围</td>
+                    <td>在一次绘制调用中所有顶点共享相同的值</td>
+                    <td>每个顶点可以有不同的值</td>
+                </tr>
+                <tr>
+                    <td>使用位置</td>
+                    <td>顶点着色器和片元着色器都可以使用</td>
+                    <td>只能在顶点着色器中使用</td>
+                </tr>
+                <tr>
+                    <td>读写特性</td>
+                    <td>只读</td>
+                    <td>只读</td>
+                </tr>
+                <tr>
+                    <td>数据更新频率</td>
+                    <td>通常在每帧或需要时更新</td>
+                    <td>通常在初始化或几何体变化时更新</td>
+                </tr>
+                <tr>
+                    <td>适用场景</td>
+                    <td>变换矩阵、全局颜色、光源信息等</td>
+                    <td>顶点坐标、顶点颜色、法线向量等</td>
+                </tr>
+            </table>
+
+            <h3>着色器代码</h3>
+            <div class="code-block">
+                <h4>顶点着色器:</h4>
+                <pre><code>// 顶点属性（每个顶点不同）
+attribute vec4 a_Position;
+attribute vec4 a_Color;
+
+// 统一变量（所有顶点共享）
+uniform float u_Scale;       // 缩放比例
+uniform float u_Time;        // 时间
+uniform mat4 u_RotationMatrix; // 旋转矩阵
+
+// 传递给片元着色器的变量
+varying vec4 v_Color;
+
+void main() {
+    // 应用缩放和旋转变换
+    vec4 scaledPosition = vec4(a_Position.x * u_Scale, a_Position.y * u_Scale, a_Position.z, 1.0);
+    gl_Position = u_RotationMatrix * scaledPosition;
+    
+    // 传递颜色到片元着色器
+    v_Color = a_Color;
+}</code></pre>
+            </div>
+
+            <div class="code-block">
+                <h4>片元着色器:</h4>
+                <pre><code>precision mediump float;
+
+// 从顶点着色器传递的变量
+varying vec4 v_Color;
+
+// 统一变量
+uniform vec4 u_GlobalColor;  // 全局颜色
+
+void main() {
+    // 混合顶点颜色和全局颜色
+    gl_FragColor = v_Color * u_GlobalColor;
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取HTML元素
+            const canvas = document.getElementById('glCanvas');
+            const shapeSelect = document.getElementById('shapeSelect');
+            const timeFactorRange = document.getElementById('timeFactorRange');
+            const timeFactorValue = document.getElementById('timeFactorValue');
+            const colorPicker = document.getElementById('colorPicker');
+            const scaleRange = document.getElementById('scaleRange');
+            const scaleValue = document.getElementById('scaleValue');
+            const animateButton = document.getElementById('animateButton');
+            const resetButton = document.getElementById('resetButton');
+
+            // 获取WebGL上下文
+            const gl = canvas.getContext('webgl');
+            if (!gl) {
+                alert('无法初始化WebGL，您的浏览器可能不支持此功能');
+                return;
+            }
+
+            // 顶点着色器源码
+            const vsSource = `
+                attribute vec4 a_Position;
+                attribute vec4 a_Color;
+                
+                uniform float u_Scale;
+                uniform float u_Time;
+                uniform mat4 u_RotationMatrix;
+                
+                varying vec4 v_Color;
+                
+                void main() {
+                    vec4 scaledPosition = vec4(a_Position.x * u_Scale, a_Position.y * u_Scale, a_Position.z, 1.0);
+                    gl_Position = u_RotationMatrix * scaledPosition;
+                    v_Color = a_Color;
+                }
+            `;
+
+            // 片元着色器源码
+            const fsSource = `
+                precision mediump float;
+                
+                varying vec4 v_Color;
+                uniform vec4 u_GlobalColor;
+                
+                void main() {
+                    gl_FragColor = v_Color * u_GlobalColor;
+                }
+            `;
+
+            // 创建着色器程序
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            // 获取着色器变量位置
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    vertexPosition: gl.getAttribLocation(shaderProgram, 'a_Position'),
+                    vertexColor: gl.getAttribLocation(shaderProgram, 'a_Color'),
+                },
+                uniformLocations: {
+                    scale: gl.getUniformLocation(shaderProgram, 'u_Scale'),
+                    time: gl.getUniformLocation(shaderProgram, 'u_Time'),
+                    rotationMatrix: gl.getUniformLocation(shaderProgram, 'u_RotationMatrix'),
+                    globalColor: gl.getUniformLocation(shaderProgram, 'u_GlobalColor'),
+                },
+            };
+
+            // 创建缓冲区
+            const buffers = initBuffers(gl);
+
+            // 动画状态
+            let animationId = null;
+            let isAnimating = false;
+            let lastTime = 0;
+            let currentTime = 0;
+
+            // 启动/停止动画
+            function toggleAnimation() {
+                if (isAnimating) {
+                    // 停止动画
+                    cancelAnimationFrame(animationId);
+                    isAnimating = false;
+                } else {
+                    // 启动动画
+                    isAnimating = true;
+                    lastTime = performance.now();
+                    animate();
+                }
+            }
+
+            // 动画循环
+            function animate(time) {
+                // 请求下一帧
+                animationId = requestAnimationFrame(animate);
+
+                // 计算时间增量和当前时间
+                const now = performance.now();
+                const deltaTime = (now - lastTime) * 0.001; // 转换为秒
+                lastTime = now;
+
+                // 更新当前时间（受时间因子影响）
+                currentTime += deltaTime * parseFloat(timeFactorRange.value);
+
+                // 绘制场景
+                drawScene(gl, programInfo, buffers, currentTime);
+            }
+
+            // 创建着色器
+            function initShaderProgram(gl, vsSource, fsSource) {
+                const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                // 创建着色器程序
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vertexShader);
+                gl.attachShader(shaderProgram, fragmentShader);
+                gl.linkProgram(shaderProgram);
+
+                // 检查是否创建成功
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    alert('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                    return null;
+                }
+
+                return shaderProgram;
+            }
+
+            // 创建单个着色器
+            function loadShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                // 检查是否编译成功
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    alert('编译着色器时出错: ' + gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+
+                return shader;
+            }
+
+            // 初始化顶点缓冲区
+            function initBuffers(gl) {
+                // 三角形顶点和颜色
+                const triangleVertices = new Float32Array([
+                    0.0, 0.5,     // 顶部
+                    -0.5, -0.5,   // 左下
+                    0.5, -0.5     // 右下
+                ]);
+
+                const triangleColors = new Float32Array([
+                    1.0, 0.0, 0.0, 1.0,   // 红色
+                    0.0, 1.0, 0.0, 1.0,   // 绿色
+                    0.0, 0.0, 1.0, 1.0    // 蓝色
+                ]);
+
+                // 正方形顶点和颜色
+                const squareVertices = new Float32Array([
+                    -0.5, 0.5,    // 左上
+                    -0.5, -0.5,   // 左下
+                    0.5, 0.5,     // 右上
+                    0.5, -0.5     // 右下
+                ]);
+
+                const squareColors = new Float32Array([
+                    1.0, 0.0, 0.0, 1.0,   // 红色
+                    0.0, 1.0, 0.0, 1.0,   // 绿色
+                    0.0, 0.0, 1.0, 1.0,   // 蓝色
+                    1.0, 1.0, 0.0, 1.0    // 黄色
+                ]);
+
+                // 圆形顶点和颜色
+                const circleVertices = generateCircleVertices(0.5, 30);
+                const circleColors = generateCircleColors(30);
+
+                // 创建并绑定顶点位置缓冲区
+                const trianglePositionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, trianglePositionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, triangleVertices, gl.STATIC_DRAW);
+
+                const triangleColorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, triangleColorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, triangleColors, gl.STATIC_DRAW);
+
+                const squarePositionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, squarePositionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, squareVertices, gl.STATIC_DRAW);
+
+                const squareColorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, squareColorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, squareColors, gl.STATIC_DRAW);
+
+                const circlePositionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, circlePositionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, circleVertices, gl.STATIC_DRAW);
+
+                const circleColorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, circleColorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, circleColors, gl.STATIC_DRAW);
+
+                return {
+                    triangle: {
+                        position: trianglePositionBuffer,
+                        color: triangleColorBuffer,
+                        vertexCount: triangleVertices.length / 2
+                    },
+                    square: {
+                        position: squarePositionBuffer,
+                        color: squareColorBuffer,
+                        vertexCount: squareVertices.length / 2
+                    },
+                    circle: {
+                        position: circlePositionBuffer,
+                        color: circleColorBuffer,
+                        vertexCount: circleVertices.length / 2
+                    }
+                };
+            }
+
+            // 生成圆形顶点
+            function generateCircleVertices(radius, segments) {
+                const vertices = new Float32Array((segments + 2) * 2);
+
+                // 圆心
+                vertices[0] = 0.0;
+                vertices[1] = 0.0;
+
+                // 圆周顶点
+                for (let i = 0; i <= segments; i++) {
+                    const angle = i * Math.PI * 2 / segments;
+                    vertices[(i + 1) * 2] = radius * Math.cos(angle);
+                    vertices[(i + 1) * 2 + 1] = radius * Math.sin(angle);
+                }
+
+                return vertices;
+            }
+
+            // 生成圆形颜色数据
+            function generateCircleColors(segments) {
+                const colors = new Float32Array((segments + 2) * 4);
+
+                // 圆心颜色（白色）
+                colors[0] = 1.0;
+                colors[1] = 1.0;
+                colors[2] = 1.0;
+                colors[3] = 1.0;
+
+                // 圆周顶点颜色（彩虹色）
+                for (let i = 0; i <= segments; i++) {
+                    const hue = i / segments;
+                    const rgb = hslToRgb(hue, 1.0, 0.5);
+
+                    colors[(i + 1) * 4] = rgb[0];
+                    colors[(i + 1) * 4 + 1] = rgb[1];
+                    colors[(i + 1) * 4 + 2] = rgb[2];
+                    colors[(i + 1) * 4 + 3] = 1.0;
+                }
+
+                return colors;
+            }
+
+            // HSL转RGB
+            function hslToRgb(h, s, l) {
+                let r, g, b;
+
+                if (s === 0) {
+                    r = g = b = l; // 灰色
+                } else {
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+
+                    r = hueToRgb(p, q, h + 1 / 3);
+                    g = hueToRgb(p, q, h);
+                    b = hueToRgb(p, q, h - 1 / 3);
+                }
+
+                return [r, g, b];
+            }
+
+            function hueToRgb(p, q, t) {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1 / 6) return p + (q - p) * 6 * t;
+                if (t < 1 / 2) return q;
+                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                return p;
+            }
+
+            // 创建旋转矩阵
+            function createRotationMatrix(angleInRadians) {
+                const c = Math.cos(angleInRadians);
+                const s = Math.sin(angleInRadians);
+
+                // 创建旋转矩阵
+                return new Float32Array([
+                    c, s, 0, 0,
+                    -s, c, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ]);
+            }
+
+            // 从颜色选择器中获取RGBA颜色
+            function getColorFromPicker() {
+                // 从颜色选择器获取16进制颜色
+                const hex = colorPicker.value;
+
+                // 转换为RGB
+                const r = parseInt(hex.substring(1, 3), 16) / 255;
+                const g = parseInt(hex.substring(3, 5), 16) / 255;
+                const b = parseInt(hex.substring(5, 7), 16) / 255;
+
+                return [r, g, b, 1.0];
+            }
+
+            // 绘制场景
+            function drawScene(gl, programInfo, buffers, time) {
+                // 清除画布
+                gl.clearColor(0.9, 0.9, 0.9, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                // 使用着色器程序
+                gl.useProgram(programInfo.program);
+
+                // 设置uniform变量
+                const scale = parseFloat(scaleRange.value);
+                gl.uniform1f(programInfo.uniformLocations.scale, scale);
+                gl.uniform1f(programInfo.uniformLocations.time, time);
+
+                // 设置旋转矩阵（基于时间）
+                const rotationMatrix = createRotationMatrix(time * 0.5);
+                gl.uniformMatrix4fv(
+                    programInfo.uniformLocations.rotationMatrix,
+                    false,
+                    rotationMatrix
+                );
+
+                // 设置全局颜色
+                const globalColor = getColorFromPicker();
+                gl.uniform4fv(programInfo.uniformLocations.globalColor, globalColor);
+
+                // 选择要绘制的形状
+                let shape;
+                let drawMode;
+
+                switch (shapeSelect.value) {
+                    case 'triangle':
+                        shape = buffers.triangle;
+                        drawMode = gl.TRIANGLES;
+                        break;
+                    case 'square':
+                        shape = buffers.square;
+                        drawMode = gl.TRIANGLE_STRIP;
+                        break;
+                    case 'circle':
+                        shape = buffers.circle;
+                        drawMode = gl.TRIANGLE_FAN;
+                        break;
+                    default:
+                        shape = buffers.triangle;
+                        drawMode = gl.TRIANGLES;
+                }
+
+                // 设置顶点位置属性
+                gl.bindBuffer(gl.ARRAY_BUFFER, shape.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    2,          // 每个顶点2个分量
+                    gl.FLOAT,   // 数据类型为浮点数
+                    false,      // 不需要归一化
+                    0,          // 步长（0表示使用类型和numComponents确定）
+                    0           // 偏移量
+                );
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+                // 设置顶点颜色属性
+                gl.bindBuffer(gl.ARRAY_BUFFER, shape.color);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexColor,
+                    4,          // 每个颜色4个分量 (RGBA)
+                    gl.FLOAT,   // 数据类型为浮点数
+                    false,      // 不需要归一化
+                    0,          // 步长
+                    0           // 偏移量
+                );
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+
+                // 绘制图形
+                gl.drawArrays(drawMode, 0, shape.vertexCount);
+            }
+
+            // 同步输入控件值
+            function syncInputValues() {
+                timeFactorValue.value = timeFactorRange.value;
+                scaleValue.value = scaleRange.value;
+            }
+
+            // 重置控件到默认值
+            function resetControls() {
+                shapeSelect.value = 'triangle';
+                timeFactorRange.value = '1';
+                timeFactorValue.value = '1';
+                colorPicker.value = '#3388ff';
+                scaleRange.value = '1';
+                scaleValue.value = '1';
+
+                // 重绘场景
+                drawScene(gl, programInfo, buffers, currentTime);
+            }
+
+            // 添加事件监听器
+            timeFactorRange.addEventListener('input', function () {
+                timeFactorValue.value = this.value;
+                // 不需要重绘，因为动画会自动更新
+            });
+
+            timeFactorValue.addEventListener('change', function () {
+                timeFactorRange.value = this.value;
+            });
+
+            scaleRange.addEventListener('input', function () {
+                scaleValue.value = this.value;
+                drawScene(gl, programInfo, buffers, currentTime);
+            });
+
+            scaleValue.addEventListener('change', function () {
+                scaleRange.value = this.value;
+                drawScene(gl, programInfo, buffers, currentTime);
+            });
+
+            colorPicker.addEventListener('input', function () {
+                drawScene(gl, programInfo, buffers, currentTime);
+            });
+
+            shapeSelect.addEventListener('change', function () {
+                drawScene(gl, programInfo, buffers, currentTime);
+            });
+
+            animateButton.addEventListener('click', toggleAnimation);
+            resetButton.addEventListener('click', resetControls);
+
+            // 初始化并绘制场景
+            syncInputValues();
+            drawScene(gl, programInfo, buffers, currentTime);
+        };
+    </script>
+</body>
+
+</html>
