@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - 点和线的绘制</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin: 10px;
+        }
+
+        .description {
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .code-example {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: Consolas, monospace;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .controls {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        select {
+            margin-right: 15px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - 点和线的绘制</h1>
+
+    <div class="container">
+        <div class="description">
+            <p>本案例展示了如何在WebGL中绘制点和线：</p>
+            <ul>
+                <li>使用顶点坐标创建WebGL几何图元</li>
+                <li>理解不同绘制模式（点、线、线段、线环）</li>
+                <li>使用顶点着色器和片元着色器</li>
+                <li>通过缓冲区传递数据给GPU</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <label for="drawingMode">绘制模式:</label>
+            <select id="drawingMode">
+                <option value="points">点 (POINTS)</option>
+                <option value="lines">线段 (LINES)</option>
+                <option value="line_strip">连续线段 (LINE_STRIP)</option>
+                <option value="line_loop">闭合线段 (LINE_LOOP)</option>
+            </select>
+
+            <label for="pointSize">点大小:</label>
+            <select id="pointSize">
+                <option value="1">1像素</option>
+                <option value="3">3像素</option>
+                <option value="5" selected>5像素</option>
+                <option value="10">10像素</option>
+            </select>
+
+            <button id="drawButton">绘制图形</button>
+            <button id="clearButton">清除画布</button>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="glCanvas" width="600" height="400">
+            您的浏览器不支持HTML5 Canvas元素
+        </canvas>
+    </div>
+
+    <div class="container">
+        <div class="description">
+            <h3>WebGL几何图元介绍</h3>
+            <p>WebGL支持多种绘制模式（绘制图元类型）：</p>
+            <ul>
+                <li><strong>gl.POINTS</strong> - 绘制独立的点</li>
+                <li><strong>gl.LINES</strong> - 绘制线段（每两个顶点形成一条线）</li>
+                <li><strong>gl.LINE_STRIP</strong> - 绘制连续的线段（首尾相连）</li>
+                <li><strong>gl.LINE_LOOP</strong> - 绘制闭合的线段（最后一个点连回第一个点）</li>
+                <li><strong>gl.TRIANGLES</strong> - 绘制三角形（每三个顶点形成一个三角形）</li>
+                <li><strong>gl.TRIANGLE_STRIP</strong> - 绘制三角形带</li>
+                <li><strong>gl.TRIANGLE_FAN</strong> - 绘制三角形扇</li>
+            </ul>
+            <p>本示例重点演示了点和线的绘制方式。</p>
+        </div>
+
+        <div class="code-example">
+            <h3>着色器代码</h3>
+            <p>顶点着色器：</p>
+            <pre><code>// 顶点着色器
+attribute vec4 a_Position;  // 顶点位置
+attribute float a_PointSize;  // 点大小
+void main() {
+    gl_Position = a_Position;  // 设置顶点位置
+    gl_PointSize = a_PointSize;  // 设置点大小（仅对POINTS模式有效）
+}</code></pre>
+
+            <p>片元着色器：</p>
+            <pre><code>// 片元着色器
+precision mediump float;  // 设置精度
+uniform vec4 u_FragColor;  // 颜色（一致变量）
+void main() {
+    gl_FragColor = u_FragColor;  // 设置片元颜色
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取HTML元素
+            const canvas = document.getElementById('glCanvas');
+            const drawingModeSelect = document.getElementById('drawingMode');
+            const pointSizeSelect = document.getElementById('pointSize');
+            const drawButton = document.getElementById('drawButton');
+            const clearButton = document.getElementById('clearButton');
+
+            // 获取WebGL上下文
+            const gl = canvas.getContext('webgl');
+            if (!gl) {
+                alert('无法初始化WebGL，您的浏览器可能不支持此功能');
+                return;
+            }
+
+            // 顶点着色器源码
+            const vsSource = `
+                attribute vec4 a_Position;
+                attribute float a_PointSize;
+                void main() {
+                    gl_Position = a_Position;
+                    gl_PointSize = a_PointSize;
+                }
+            `;
+
+            // 片元着色器源码
+            const fsSource = `
+                precision mediump float;
+                uniform vec4 u_FragColor;
+                void main() {
+                    gl_FragColor = u_FragColor;
+                }
+            `;
+
+            // 创建着色器程序
+            const program = createProgram(gl, vsSource, fsSource);
+            gl.useProgram(program);
+
+            // 获取着色器变量位置
+            const a_Position = gl.getAttribLocation(program, 'a_Position');
+            const a_PointSize = gl.getAttribLocation(program, 'a_PointSize');
+            const u_FragColor = gl.getUniformLocation(program, 'u_FragColor');
+
+            // 顶点数据 - 一个星形图案
+            const vertices = new Float32Array([
+                0.0, 0.5,    // 顶部点
+                -0.5, -0.5,  // 左下点
+                0.5, -0.5,   // 右下点
+                -0.4, 0.2,   // 左侧点
+                0.4, 0.2,    // 右侧点
+                0.0, -0.3    // 底部点
+            ]);
+
+            // 创建缓冲区对象
+            const vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+            // 清除画布
+            function clearCanvas() {
+                gl.clearColor(0.9, 0.9, 0.9, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+
+            // 绘制图形
+            function drawShape() {
+                // 清除画布
+                clearCanvas();
+
+                // 启用顶点位置属性
+                gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(a_Position);
+
+                // 设置点大小
+                const pointSize = parseFloat(pointSizeSelect.value);
+                gl.vertexAttrib1f(a_PointSize, pointSize);
+
+                // 设置颜色
+                gl.uniform4f(u_FragColor, 0.0, 0.5, 0.8, 1.0);
+
+                // 获取绘制模式
+                let mode;
+                switch (drawingModeSelect.value) {
+                    case 'points':
+                        mode = gl.POINTS;
+                        break;
+                    case 'lines':
+                        mode = gl.LINES;
+                        break;
+                    case 'line_strip':
+                        mode = gl.LINE_STRIP;
+                        break;
+                    case 'line_loop':
+                        mode = gl.LINE_LOOP;
+                        break;
+                    default:
+                        mode = gl.POINTS;
+                }
+
+                // 绘制
+                gl.drawArrays(mode, 0, vertices.length / 2);
+            }
+
+            // 创建着色器函数
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                // 检查着色器是否编译成功
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('着色器编译错误: ' + gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+
+                return shader;
+            }
+
+            // 创建程序函数
+            function createProgram(gl, vsSource, fsSource) {
+                const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                // 创建着色器程序
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragmentShader);
+                gl.linkProgram(program);
+
+                // 检查链接是否成功
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    console.error('无法初始化着色器程序: ' + gl.getProgramInfoLog(program));
+                    return null;
+                }
+
+                return program;
+            }
+
+            // 添加事件监听器
+            drawButton.addEventListener('click', drawShape);
+            clearButton.addEventListener('click', clearCanvas);
+
+            // 初始化
+            clearCanvas();
+            drawShape();
+        };
+    </script>
+</body>
+
+</html>

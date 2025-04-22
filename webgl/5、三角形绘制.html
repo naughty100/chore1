@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - 三角形绘制</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin: 10px;
+        }
+
+        .description {
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .code-example {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: Consolas, monospace;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .controls {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        select {
+            margin-right: 15px;
+            padding: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - 三角形绘制</h1>
+
+    <div class="container">
+        <div class="description">
+            <p>本案例展示了如何在WebGL中绘制三角形及其变体：</p>
+            <ul>
+                <li>使用三角形基本图元 (TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN)</li>
+                <li>着色器编写与使用</li>
+                <li>使用顶点索引缓冲区优化绘制</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <label for="drawingMode">绘制模式:</label>
+            <select id="drawingMode">
+                <option value="triangles">三角形 (TRIANGLES)</option>
+                <option value="triangle_strip">三角形带 (TRIANGLE_STRIP)</option>
+                <option value="triangle_fan">三角形扇 (TRIANGLE_FAN)</option>
+            </select>
+
+            <label for="colorMode">颜色模式:</label>
+            <select id="colorMode">
+                <option value="solid">单色填充</option>
+                <option value="gradient">顶点渐变</option>
+            </select>
+
+            <button id="drawButton">绘制图形</button>
+            <button id="clearButton">清除画布</button>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="glCanvas" width="600" height="400">
+            您的浏览器不支持HTML5 Canvas元素
+        </canvas>
+    </div>
+
+    <div class="container">
+        <div class="description">
+            <h3>三角形绘制模式说明</h3>
+            <table>
+                <tr>
+                    <th>模式</th>
+                    <th>描述</th>
+                </tr>
+                <tr>
+                    <td>gl.TRIANGLES</td>
+                    <td>每三个顶点形成一个独立的三角形。需要n个三角形则需要3n个顶点。</td>
+                </tr>
+                <tr>
+                    <td>gl.TRIANGLE_STRIP</td>
+                    <td>三角形带。第一个三角形使用前三个顶点，之后每增加一个顶点，与前两个顶点组成新三角形。需要n个三角形仅需要n+2个顶点。</td>
+                </tr>
+                <tr>
+                    <td>gl.TRIANGLE_FAN</td>
+                    <td>三角形扇。第一个顶点作为所有三角形的共享顶点，每次使用连续的两个顶点与第一个顶点形成三角形。需要n个三角形仅需要n+2个顶点。</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="code-example">
+            <h3>着色器代码</h3>
+            <p>具有顶点颜色的顶点着色器：</p>
+            <pre><code>// 顶点着色器
+attribute vec4 a_Position;  // 顶点位置
+attribute vec4 a_Color;     // 顶点颜色
+varying vec4 v_Color;       // 传递给片元着色器的颜色
+void main() {
+    gl_Position = a_Position;
+    v_Color = a_Color;      // 将颜色传递给片元着色器
+}</code></pre>
+
+            <p>接收顶点颜色的片元着色器：</p>
+            <pre><code>// 片元着色器
+precision mediump float;
+varying vec4 v_Color;        // 从顶点着色器接收的颜色
+void main() {
+    gl_FragColor = v_Color;  // 使用插值后的颜色
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取HTML元素
+            const canvas = document.getElementById('glCanvas');
+            const drawingModeSelect = document.getElementById('drawingMode');
+            const colorModeSelect = document.getElementById('colorMode');
+            const drawButton = document.getElementById('drawButton');
+            const clearButton = document.getElementById('clearButton');
+
+            // 获取WebGL上下文
+            const gl = canvas.getContext('webgl');
+            if (!gl) {
+                alert('无法初始化WebGL，您的浏览器可能不支持此功能');
+                return;
+            }
+
+            // 定义顶点着色器（单色）
+            const vsSolidSource = `
+                attribute vec4 a_Position;
+                void main() {
+                    gl_Position = a_Position;
+                }
+            `;
+
+            // 定义片元着色器（单色）
+            const fsSolidSource = `
+                precision mediump float;
+                uniform vec4 u_FragColor;
+                void main() {
+                    gl_FragColor = u_FragColor;
+                }
+            `;
+
+            // 定义顶点着色器（渐变）
+            const vsGradientSource = `
+                attribute vec4 a_Position;
+                attribute vec4 a_Color;
+                varying vec4 v_Color;
+                void main() {
+                    gl_Position = a_Position;
+                    v_Color = a_Color;
+                }
+            `;
+
+            // 定义片元着色器（渐变）
+            const fsGradientSource = `
+                precision mediump float;
+                varying vec4 v_Color;
+                void main() {
+                    gl_FragColor = v_Color;
+                }
+            `;
+
+            // 创建着色器程序
+            const solidProgram = createProgram(gl, vsSolidSource, fsSolidSource);
+            const gradientProgram = createProgram(gl, vsGradientSource, fsGradientSource);
+
+            // 获取着色器变量位置（单色）
+            const a_Position_solid = gl.getAttribLocation(solidProgram, 'a_Position');
+            const u_FragColor = gl.getUniformLocation(solidProgram, 'u_FragColor');
+
+            // 获取着色器变量位置（渐变）
+            const a_Position_gradient = gl.getAttribLocation(gradientProgram, 'a_Position');
+            const a_Color = gl.getAttribLocation(gradientProgram, 'a_Color');
+
+            // 三角形基本图形的顶点
+            const triangleVertices = new Float32Array([
+                // 第一个三角形
+                -0.5, 0.5,    // 左上
+                -0.5, -0.5,   // 左下
+                0.0, 0.0,     // 中心
+
+                // 第二个三角形
+                0.5, 0.5,     // 右上
+                0.0, 0.0,     // 中心
+                0.5, -0.5     // 右下
+            ]);
+
+            // 三角形带的顶点
+            const stripVertices = new Float32Array([
+                -0.7, 0.5,    // 左上
+                -0.7, -0.5,   // 左下
+                -0.3, 0.5,    // 中左上
+                -0.3, -0.5,   // 中左下
+                0.3, 0.5,     // 中右上
+                0.3, -0.5,    // 中右下
+                0.7, 0.5,     // 右上
+                0.7, -0.5     // 右下
+            ]);
+
+            // 三角形扇的顶点
+            const fanVertices = new Float32Array([
+                0.0, 0.0,     // 中心点(共享点)
+                0.0, 0.5,     // 顶部
+                0.4, 0.3,     // 右上
+                0.5, 0.0,     // 右侧
+                0.4, -0.3,    // 右下
+                0.0, -0.5,    // 底部
+                -0.4, -0.3,   // 左下
+                -0.5, 0.0,    // 左侧
+                -0.4, 0.3,    // 左上
+                0.0, 0.5      // 回到顶部(闭合)
+            ]);
+
+            // 顶点颜色数据
+            const colors = new Float32Array([
+                1.0, 0.0, 0.0, 1.0,   // 红色
+                0.0, 1.0, 0.0, 1.0,   // 绿色
+                0.0, 0.0, 1.0, 1.0,   // 蓝色
+                1.0, 1.0, 0.0, 1.0,   // 黄色
+                0.0, 1.0, 1.0, 1.0,   // 青色
+                1.0, 0.0, 1.0, 1.0,   // 品红色
+                0.5, 0.5, 0.5, 1.0,   // 灰色
+                1.0, 0.5, 0.0, 1.0,   // 橙色
+                0.0, 0.5, 1.0, 1.0,   // 蓝绿
+                0.5, 0.0, 0.5, 1.0    // 紫色
+            ]);
+
+            // 创建缓冲区对象
+            const vertexBuffer = gl.createBuffer();
+            const colorBuffer = gl.createBuffer();
+
+            // 清除画布
+            function clearCanvas() {
+                gl.clearColor(0.9, 0.9, 0.9, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+
+            // 绘制图形
+            function drawShape() {
+                // 获取绘制模式
+                let vertices;
+                let vertexCount;
+                let mode;
+
+                switch (drawingModeSelect.value) {
+                    case 'triangles':
+                        vertices = triangleVertices;
+                        vertexCount = 6; // 两个三角形，共6个顶点
+                        mode = gl.TRIANGLES;
+                        break;
+                    case 'triangle_strip':
+                        vertices = stripVertices;
+                        vertexCount = 8; // 8个顶点
+                        mode = gl.TRIANGLE_STRIP;
+                        break;
+                    case 'triangle_fan':
+                        vertices = fanVertices;
+                        vertexCount = 10; // 10个顶点
+                        mode = gl.TRIANGLE_FAN;
+                        break;
+                    default:
+                        vertices = triangleVertices;
+                        vertexCount = 6;
+                        mode = gl.TRIANGLES;
+                }
+
+                // 清除画布
+                clearCanvas();
+
+                // 绑定顶点缓冲区
+                gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+                // 根据颜色模式选择不同的着色器程序
+                if (colorModeSelect.value === 'solid') {
+                    // 使用单色着色器程序
+                    gl.useProgram(solidProgram);
+
+                    // 将顶点坐标传给着色器
+                    gl.vertexAttribPointer(a_Position_solid, 2, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Position_solid);
+
+                    // 设置片元着色器中的颜色变量
+                    gl.uniform4f(u_FragColor, 0.0, 0.5, 0.8, 1.0);
+
+                    // 绘制三角形
+                    gl.drawArrays(mode, 0, vertexCount);
+                } else {
+                    // 使用渐变着色器程序
+                    gl.useProgram(gradientProgram);
+
+                    // 将顶点坐标传给着色器
+                    gl.vertexAttribPointer(a_Position_gradient, 2, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Position_gradient);
+
+                    // 将颜色数据传给着色器
+                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+                    gl.vertexAttribPointer(a_Color, 4, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Color);
+
+                    // 绘制三角形
+                    gl.drawArrays(mode, 0, vertexCount);
+                }
+            }
+
+            // 创建着色器函数
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                // 检查着色器是否编译成功
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('着色器编译错误: ' + gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+
+                return shader;
+            }
+
+            // 创建程序函数
+            function createProgram(gl, vsSource, fsSource) {
+                const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                // 创建着色器程序
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragmentShader);
+                gl.linkProgram(program);
+
+                // 检查链接是否成功
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    console.error('无法初始化着色器程序: ' + gl.getProgramInfoLog(program));
+                    return null;
+                }
+
+                return program;
+            }
+
+            // 添加事件监听器
+            drawButton.addEventListener('click', drawShape);
+            clearButton.addEventListener('click', clearCanvas);
+            drawingModeSelect.addEventListener('change', drawShape);
+            colorModeSelect.addEventListener('change', drawShape);
+
+            // 初始化
+            clearCanvas();
+            drawShape();
+        };
+    </script>
+</body>
+
+</html>

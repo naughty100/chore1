@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - 获取WebGL上下文</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+
+        .description,
+        .status {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .description {
+            background-color: #e9f7fe;
+        }
+
+        .status {
+            background-color: #f0f0f0;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - 获取WebGL上下文</h1>
+
+    <div class="description">
+        <p>本案例展示了如何获取WebGL上下文并检查浏览器兼容性。主要内容包括：</p>
+        <ul>
+            <li>通过不同方法获取WebGL上下文</li>
+            <li>检测浏览器对WebGL的支持情况</li>
+            <li>获取并显示WebGL相关信息（版本、渲染器等）</li>
+            <li>了解WebGL上下文属性配置</li>
+        </ul>
+    </div>
+
+    <!-- 创建Canvas元素 -->
+    <canvas id="glCanvas" width="600" height="300">
+        您的浏览器不支持HTML5 Canvas元素
+    </canvas>
+
+    <!-- 状态显示区域 -->
+    <div id="status" class="status">
+        <p>正在检测WebGL兼容性...</p>
+    </div>
+
+    <div class="description">
+        <h3>WebGL上下文参数配置</h3>
+        <p>在获取WebGL上下文时，我们可以传入一个配置对象来设置上下文的属性：</p>
+        <table>
+            <tr>
+                <th>参数</th>
+                <th>说明</th>
+                <th>默认值</th>
+            </tr>
+            <tr>
+                <td>alpha</td>
+                <td>是否创建透明Canvas</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>depth</td>
+                <td>是否创建深度缓冲区</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>stencil</td>
+                <td>是否创建模板缓冲区</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>antialias</td>
+                <td>是否启用抗锯齿</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>premultipliedAlpha</td>
+                <td>是否预乘Alpha通道</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>preserveDrawingBuffer</td>
+                <td>是否保留绘图缓冲区</td>
+                <td>false</td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取状态显示元素
+            const statusElement = document.getElementById('status');
+
+            // 获取Canvas元素
+            const canvas = document.getElementById('glCanvas');
+
+            // 尝试获取WebGL2上下文
+            let gl = canvas.getContext('webgl2');
+            let webglVersion = 2;
+
+            // 如果WebGL2不可用，尝试获取WebGL1上下文
+            if (!gl) {
+                gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                webglVersion = 1;
+
+                // 如果WebGL1也不可用
+                if (!gl) {
+                    statusElement.className = 'status error';
+                    statusElement.innerHTML = '<p><strong>错误：</strong>您的浏览器似乎不支持WebGL。</p>' +
+                        '<p>请尝试使用最新版本的Chrome、Firefox、Edge或Safari浏览器。</p>';
+                    return;
+                }
+            }
+
+            // 如果成功获取WebGL上下文
+            statusElement.className = 'status success';
+
+            // 获取WebGL信息
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            let vendor = '未知';
+            let renderer = '未知';
+
+            if (debugInfo) {
+                vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '未知';
+                renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '未知';
+            }
+
+            // 获取WebGL功能支持情况
+            const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+            const maxViewportDims = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+            const maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+
+            // 显示WebGL信息
+            statusElement.innerHTML = '<p><strong>WebGL支持检测成功！</strong></p>' +
+                '<p>WebGL版本: ' + webglVersion + '</p>' +
+                '<p>渲染供应商: ' + vendor + '</p>' +
+                '<p>渲染器: ' + renderer + '</p>' +
+                '<p>最大纹理尺寸: ' + maxTextureSize + 'px</p>' +
+                '<p>最大视口尺寸: ' + maxViewportDims[0] + 'x' + maxViewportDims[1] + 'px</p>' +
+                '<p>最大顶点属性数: ' + maxVertexAttribs + '</p>';
+
+            // 设置背景颜色为浅绿色
+            gl.clearColor(0.8, 1.0, 0.8, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        };
+    </script>
+</body>
+
+</html>

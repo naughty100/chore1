@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - 设置视口和清除颜色</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .canvas-wrapper {
+            margin: 10px;
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .description {
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+        }
+
+        .color-preview {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            border: 1px solid #999;
+            vertical-align: middle;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        input {
+            margin-right: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - 设置视口和清除颜色</h1>
+
+    <div class="container">
+        <div class="description">
+            <p>本案例展示了WebGL中视口（Viewport）的设置和清除颜色的使用：</p>
+            <ul>
+                <li>了解视口（Viewport）概念及其设置方法</li>
+                <li>学习如何使用clearColor设置背景颜色</li>
+                <li>理解不同视口的作用和效果</li>
+                <li>实践颜色值的调整和应用</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <h3>颜色控制</h3>
+            <div>
+                <label for="redRange">红色 (R):</label>
+                <input type="range" id="redRange" min="0" max="1" step="0.01" value="0.3">
+                <input type="number" id="redValue" min="0" max="1" step="0.01" value="0.3" style="width:60px">
+
+                <label for="greenRange">绿色 (G):</label>
+                <input type="range" id="greenRange" min="0" max="1" step="0.01" value="0.4">
+                <input type="number" id="greenValue" min="0" max="1" step="0.01" value="0.4" style="width:60px">
+            </div>
+            <div style="margin-top:10px">
+                <label for="blueRange">蓝色 (B):</label>
+                <input type="range" id="blueRange" min="0" max="1" step="0.01" value="0.5">
+                <input type="number" id="blueValue" min="0" max="1" step="0.01" value="0.5" style="width:60px">
+
+                <label for="alphaRange">透明度 (A):</label>
+                <input type="range" id="alphaRange" min="0" max="1" step="0.01" value="1.0">
+                <input type="number" id="alphaValue" min="0" max="1" step="0.01" value="1.0" style="width:60px">
+            </div>
+            <div style="margin-top:10px">
+                <span>颜色预览：</span>
+                <div id="colorPreview" class="color-preview" style="background-color:rgba(76,102,127,1)"></div>
+                <button id="applyColor" style="margin-left:15px">应用颜色</button>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>视口演示</h3>
+            <p>下面的四个Canvas展示了不同视口设置的效果：</p>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <div class="canvas-wrapper">
+            <canvas id="canvas1" width="200" height="200"></canvas>
+            <p>完整视口<br><code>viewport(0,0,200,200)</code></p>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas2" width="200" height="200"></canvas>
+            <p>左上角区域<br><code>viewport(0,0,100,100)</code></p>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas3" width="200" height="200"></canvas>
+            <p>中心区域<br><code>viewport(50,50,100,100)</code></p>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas4" width="200" height="200"></canvas>
+            <p>拉伸视口<br><code>viewport(0,0,400,100)</code></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="description">
+            <h3>视口（Viewport）和清除颜色说明</h3>
+            <p><strong>视口（Viewport）</strong>定义了WebGL绘制区域在Canvas上的位置和大小。通过<code>gl.viewport(x, y, width, height)</code>设置：
+            </p>
+            <ul>
+                <li><code>x, y</code>: 视口左下角在Canvas中的坐标（像素）</li>
+                <li><code>width, height</code>: 视口的宽度和高度（像素）</li>
+            </ul>
+            <p><strong>清除颜色</strong>用于设置Canvas的背景颜色：</p>
+            <ul>
+                <li><code>gl.clearColor(red, green, blue, alpha)</code>: 设置清除颜色，各参数范围为0.0到1.0</li>
+                <li><code>gl.clear(gl.COLOR_BUFFER_BIT)</code>: 使用当前设置的清除颜色来清空颜色缓冲区</li>
+            </ul>
+            <p>视口设置会影响所有后续的渲染操作，是WebGL渲染管线的重要组成部分。</p>
+        </div>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取HTML元素
+            const redRange = document.getElementById('redRange');
+            const greenRange = document.getElementById('greenRange');
+            const blueRange = document.getElementById('blueRange');
+            const alphaRange = document.getElementById('alphaRange');
+
+            const redValue = document.getElementById('redValue');
+            const greenValue = document.getElementById('greenValue');
+            const blueValue = document.getElementById('blueValue');
+            const alphaValue = document.getElementById('alphaValue');
+
+            const colorPreview = document.getElementById('colorPreview');
+            const applyColorBtn = document.getElementById('applyColor');
+
+            // 获取Canvas和上下文
+            let contexts = [];
+            for (let i = 1; i <= 4; i++) {
+                const canvas = document.getElementById('canvas' + i);
+                const gl = canvas.getContext('webgl');
+
+                if (!gl) {
+                    alert('您的浏览器不支持WebGL');
+                    return;
+                }
+
+                contexts.push(gl);
+            }
+
+            // 初始颜色值
+            let red = 0.3, green = 0.4, blue = 0.5, alpha = 1.0;
+
+            // 更新颜色预览
+            function updateColorPreview() {
+                const r = Math.floor(red * 255);
+                const g = Math.floor(green * 255);
+                const b = Math.floor(blue * 255);
+                colorPreview.style.backgroundColor = `rgba(${r},${g},${b},${alpha})`;
+            }
+
+            // 应用颜色到所有Canvas
+            function applyColorToCanvases() {
+                // 设置第一个Canvas - 完整视口
+                contexts[0].viewport(0, 0, 200, 200);
+                contexts[0].clearColor(red, green, blue, alpha);
+                contexts[0].clear(contexts[0].COLOR_BUFFER_BIT);
+
+                // 设置第二个Canvas - 左上角区域
+                contexts[1].viewport(0, 100, 100, 100); // 注意WebGL坐标系与Canvas坐标系的区别
+                contexts[1].clearColor(red, green, blue, alpha);
+                contexts[1].clear(contexts[1].COLOR_BUFFER_BIT);
+
+                // 设置第三个Canvas - 中心区域
+                contexts[2].viewport(50, 50, 100, 100);
+                contexts[2].clearColor(red, green, blue, alpha);
+                contexts[2].clear(contexts[2].COLOR_BUFFER_BIT);
+
+                // 设置第四个Canvas - 拉伸视口
+                contexts[3].viewport(0, 50, 400, 100);
+                contexts[3].clearColor(red, green, blue, alpha);
+                contexts[3].clear(contexts[3].COLOR_BUFFER_BIT);
+            }
+
+            // 同步滑块和数值输入框
+            function syncInputs() {
+                redValue.value = redRange.value;
+                greenValue.value = greenRange.value;
+                blueValue.value = blueRange.value;
+                alphaValue.value = alphaRange.value;
+
+                red = parseFloat(redRange.value);
+                green = parseFloat(greenRange.value);
+                blue = parseFloat(blueRange.value);
+                alpha = parseFloat(alphaRange.value);
+
+                updateColorPreview();
+            }
+
+            // 添加事件监听器
+            redRange.addEventListener('input', syncInputs);
+            greenRange.addEventListener('input', syncInputs);
+            blueRange.addEventListener('input', syncInputs);
+            alphaRange.addEventListener('input', syncInputs);
+
+            redValue.addEventListener('change', function () {
+                redRange.value = this.value;
+                syncInputs();
+            });
+
+            greenValue.addEventListener('change', function () {
+                greenRange.value = this.value;
+                syncInputs();
+            });
+
+            blueValue.addEventListener('change', function () {
+                blueRange.value = this.value;
+                syncInputs();
+            });
+
+            alphaValue.addEventListener('change', function () {
+                alphaRange.value = this.value;
+                syncInputs();
+            });
+
+            applyColorBtn.addEventListener('click', applyColorToCanvases);
+
+            // 初始化
+            syncInputs();
+            applyColorToCanvases();
+        };
+    </script>
+</body>
+
+</html>

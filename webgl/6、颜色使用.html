@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL入门 - 颜色使用</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin: 10px;
+        }
+
+        .description {
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .code-example {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: Consolas, monospace;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .controls {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .color-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .color-slider {
+            margin: 0 10px 10px 0;
+            display: flex;
+            align-items: center;
+            min-width: 200px;
+        }
+
+        label {
+            margin-right: 10px;
+            min-width: 80px;
+        }
+
+        input[type="range"] {
+            width: 120px;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            margin-left: 5px;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        select {
+            margin-right: 15px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .color-preview {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            margin: 0 10px;
+            display: inline-block;
+        }
+
+        .color-space {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL入门 - 颜色使用</h1>
+
+    <div class="container">
+        <div class="description">
+            <p>本案例展示了WebGL中颜色的使用方法：</p>
+            <ul>
+                <li>理解RGBA颜色模型</li>
+                <li>使用统一颜色(uniform color)填充图形</li>
+                <li>使用顶点颜色实现渐变</li>
+                <li>使用HSL、HSV颜色空间</li>
+                <li>理解颜色混合（透明度）</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <h3>1. 选择绘制模式</h3>
+            <select id="colorMode">
+                <option value="uniform">统一颜色</option>
+                <option value="vertex">顶点颜色(渐变)</option>
+                <option value="rainbow">彩虹渐变</option>
+            </select>
+
+            <h3>2. 颜色控制 (RGBA)</h3>
+            <div class="color-controls">
+                <div class="color-slider">
+                    <label for="redRange">红色 (R):</label>
+                    <input type="range" id="redRange" min="0" max="1" step="0.01" value="0.5">
+                    <input type="number" id="redValue" min="0" max="1" step="0.01" value="0.5">
+                </div>
+
+                <div class="color-slider">
+                    <label for="greenRange">绿色 (G):</label>
+                    <input type="range" id="greenRange" min="0" max="1" step="0.01" value="0.3">
+                    <input type="number" id="greenValue" min="0" max="1" step="0.01" value="0.3">
+                </div>
+
+                <div class="color-slider">
+                    <label for="blueRange">蓝色 (B):</label>
+                    <input type="range" id="blueRange" min="0" max="1" step="0.01" value="0.8">
+                    <input type="number" id="blueValue" min="0" max="1" step="0.01" value="0.8">
+                </div>
+
+                <div class="color-slider">
+                    <label for="alphaRange">透明度 (A):</label>
+                    <input type="range" id="alphaRange" min="0" max="1" step="0.01" value="1.0">
+                    <input type="number" id="alphaValue" min="0" max="1" step="0.01" value="1.0">
+                </div>
+
+                <div>
+                    <span>颜色预览:</span>
+                    <div id="colorPreview" class="color-preview" style="background-color:rgba(128,77,204,1.0)"></div>
+                </div>
+            </div>
+
+            <div class="color-space">
+                <h3>3. HSL颜色控制</h3>
+                <div class="color-controls">
+                    <div class="color-slider">
+                        <label for="hueRange">色相 (H):</label>
+                        <input type="range" id="hueRange" min="0" max="360" step="1" value="270">
+                        <input type="number" id="hueValue" min="0" max="360" step="1" value="270">
+                    </div>
+
+                    <div class="color-slider">
+                        <label for="satRange">饱和度 (S):</label>
+                        <input type="range" id="satRange" min="0" max="100" step="1" value="60">
+                        <input type="number" id="satValue" min="0" max="100" step="1" value="60">
+                    </div>
+
+                    <div class="color-slider">
+                        <label for="lightRange">亮度 (L):</label>
+                        <input type="range" id="lightRange" min="0" max="100" step="1" value="55">
+                        <input type="number" id="lightValue" min="0" max="100" step="1" value="55">
+                    </div>
+
+                    <div>
+                        <span>HSL预览:</span>
+                        <div id="hslPreview" class="color-preview" style="background-color:hsl(270,60%,55%)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:15px;">
+                <button id="applyColorButton">应用颜色</button>
+                <button id="resetButton">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="glCanvas" width="600" height="400">
+            您的浏览器不支持HTML5 Canvas元素
+        </canvas>
+    </div>
+
+    <div class="container">
+        <div class="description">
+            <h3>WebGL中的颜色</h3>
+            <p>WebGL使用RGBA颜色模型，每个颜色通道的值范围为0.0到1.0：</p>
+            <ul>
+                <li><strong>R (红色):</strong> 0.0表示没有红色，1.0表示最大红色</li>
+                <li><strong>G (绿色):</strong> 0.0表示没有绿色，1.0表示最大绿色</li>
+                <li><strong>B (蓝色):</strong> 0.0表示没有蓝色，1.0表示最大蓝色</li>
+                <li><strong>A (透明度):</strong> 0.0表示完全透明，1.0表示完全不透明</li>
+            </ul>
+            <p>在WebGL中有两种主要的颜色设置方式：</p>
+            <ol>
+                <li><strong>统一颜色 (Uniform Color):</strong> 整个图形使用相同的颜色</li>
+                <li><strong>顶点颜色 (Vertex Color):</strong> 为每个顶点指定不同的颜色，片元颜色通过插值计算</li>
+            </ol>
+        </div>
+
+        <div class="code-example">
+            <h3>着色器代码</h3>
+            <p>统一颜色的着色器：</p>
+            <pre><code>// 顶点着色器
+attribute vec4 a_Position;
+void main() {
+    gl_Position = a_Position;
+}
+
+// 片元着色器
+precision mediump float;
+uniform vec4 u_FragColor;  // 统一的颜色值
+void main() {
+    gl_FragColor = u_FragColor;
+}</code></pre>
+
+            <p>顶点颜色的着色器：</p>
+            <pre><code>// 顶点着色器
+attribute vec4 a_Position;
+attribute vec4 a_Color;
+varying vec4 v_Color;     // 传递给片元着色器的颜色
+void main() {
+    gl_Position = a_Position;
+    v_Color = a_Color;    // 将颜色数据传递给片元着色器
+}
+
+// 片元着色器
+precision mediump float;
+varying vec4 v_Color;     // 从顶点着色器接收的颜色
+void main() {
+    gl_FragColor = v_Color;  // 使用从顶点插值的颜色
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // 在页面加载完成后运行
+        window.onload = function () {
+            // 获取HTML元素
+            const canvas = document.getElementById('glCanvas');
+            const colorModeSelect = document.getElementById('colorMode');
+            const applyColorButton = document.getElementById('applyColorButton');
+            const resetButton = document.getElementById('resetButton');
+
+            // RGBA颜色控制元素
+            const redRange = document.getElementById('redRange');
+            const greenRange = document.getElementById('greenRange');
+            const blueRange = document.getElementById('blueRange');
+            const alphaRange = document.getElementById('alphaRange');
+
+            const redValue = document.getElementById('redValue');
+            const greenValue = document.getElementById('greenValue');
+            const blueValue = document.getElementById('blueValue');
+            const alphaValue = document.getElementById('alphaValue');
+
+            const colorPreview = document.getElementById('colorPreview');
+
+            // HSL颜色控制元素
+            const hueRange = document.getElementById('hueRange');
+            const satRange = document.getElementById('satRange');
+            const lightRange = document.getElementById('lightRange');
+
+            const hueValue = document.getElementById('hueValue');
+            const satValue = document.getElementById('satValue');
+            const lightValue = document.getElementById('lightValue');
+
+            const hslPreview = document.getElementById('hslPreview');
+
+            // 获取WebGL上下文
+            const gl = canvas.getContext('webgl');
+            if (!gl) {
+                alert('无法初始化WebGL，您的浏览器可能不支持此功能');
+                return;
+            }
+
+            // 启用alpha混合
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            // 顶点着色器（统一颜色）
+            const vsUniformSource = `
+                attribute vec4 a_Position;
+                void main() {
+                    gl_Position = a_Position;
+                }
+            `;
+
+            // 片元着色器（统一颜色）
+            const fsUniformSource = `
+                precision mediump float;
+                uniform vec4 u_FragColor;
+                void main() {
+                    gl_FragColor = u_FragColor;
+                }
+            `;
+
+            // 顶点着色器（顶点颜色）
+            const vsVertexSource = `
+                attribute vec4 a_Position;
+                attribute vec4 a_Color;
+                varying vec4 v_Color;
+                void main() {
+                    gl_Position = a_Position;
+                    v_Color = a_Color;
+                }
+            `;
+
+            // 片元着色器（顶点颜色）
+            const fsVertexSource = `
+                precision mediump float;
+                varying vec4 v_Color;
+                void main() {
+                    gl_FragColor = v_Color;
+                }
+            `;
+
+            // 创建着色器程序
+            const uniformProgram = createProgram(gl, vsUniformSource, fsUniformSource);
+            const vertexProgram = createProgram(gl, vsVertexSource, fsVertexSource);
+
+            // 获取着色器变量位置
+            const a_Position_uniform = gl.getAttribLocation(uniformProgram, 'a_Position');
+            const u_FragColor = gl.getUniformLocation(uniformProgram, 'u_FragColor');
+
+            const a_Position_vertex = gl.getAttribLocation(vertexProgram, 'a_Position');
+            const a_Color = gl.getAttribLocation(vertexProgram, 'a_Color');
+
+            // 创建正六边形的顶点
+            const vertexCount = 8; // 中心点 + 6个边 + 闭合点
+            const vertices = new Float32Array(vertexCount * 2);
+            const radius = 0.7;
+
+            // 中心点
+            vertices[0] = 0.0;
+            vertices[1] = 0.0;
+
+            // 六个边的顶点 + 闭合顶点
+            for (let i = 0; i < 7; i++) {
+                const angle = i * Math.PI / 3;
+                vertices[(i + 1) * 2] = radius * Math.cos(angle);
+                vertices[(i + 1) * 2 + 1] = radius * Math.sin(angle);
+            }
+
+            // 顶点颜色
+            const vertexColors = new Float32Array(vertexCount * 4);
+
+            // 更新顶点颜色函数
+            function updateVertexColors(rainbow = false) {
+                if (rainbow) {
+                    // 彩虹渐变
+                    // 中心点为白色
+                    vertexColors[0] = 1.0;
+                    vertexColors[1] = 1.0;
+                    vertexColors[2] = 1.0;
+                    vertexColors[3] = 1.0;
+
+                    // 边缘点为彩虹色
+                    for (let i = 0; i < 7; i++) {
+                        const hue = i * 60; // 每60度一种颜色
+                        const rgbColor = hslToRgb(hue / 360, 1.0, 0.5);
+
+                        vertexColors[(i + 1) * 4] = rgbColor[0];
+                        vertexColors[(i + 1) * 4 + 1] = rgbColor[1];
+                        vertexColors[(i + 1) * 4 + 2] = rgbColor[2];
+                        vertexColors[(i + 1) * 4 + 3] = 1.0;
+                    }
+                } else {
+                    // 使用当前选择的颜色
+                    const r = parseFloat(redRange.value);
+                    const g = parseFloat(greenRange.value);
+                    const b = parseFloat(blueRange.value);
+                    const a = parseFloat(alphaRange.value);
+
+                    // 中心点使用选择的颜色
+                    vertexColors[0] = r;
+                    vertexColors[1] = g;
+                    vertexColors[2] = b;
+                    vertexColors[3] = a;
+
+                    // 其他点使用渐变色（从中心到边缘逐渐变暗）
+                    for (let i = 0; i < 7; i++) {
+                        const factor = 0.5; // 边缘点颜色强度
+
+                        vertexColors[(i + 1) * 4] = r * factor;
+                        vertexColors[(i + 1) * 4 + 1] = g * factor;
+                        vertexColors[(i + 1) * 4 + 2] = b * factor;
+                        vertexColors[(i + 1) * 4 + 3] = a;
+                    }
+                }
+            }
+
+            // 创建缓冲区对象
+            const vertexBuffer = gl.createBuffer();
+            const colorBuffer = gl.createBuffer();
+
+            // 绑定顶点数据
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+            // 清除画布
+            function clearCanvas() {
+                gl.clearColor(0.9, 0.9, 0.9, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+
+            // 绘制图形
+            function drawShape() {
+                clearCanvas();
+
+                // 更新顶点颜色
+                const isRainbow = colorModeSelect.value === 'rainbow';
+                updateVertexColors(isRainbow);
+
+                // 绑定顶点数据
+                gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+                if (colorModeSelect.value === 'uniform') {
+                    // 使用统一颜色着色器程序
+                    gl.useProgram(uniformProgram);
+
+                    // 设置顶点位置属性
+                    gl.vertexAttribPointer(a_Position_uniform, 2, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Position_uniform);
+
+                    // 设置颜色（从RGBA控制器获取）
+                    const r = parseFloat(redRange.value);
+                    const g = parseFloat(greenRange.value);
+                    const b = parseFloat(blueRange.value);
+                    const a = parseFloat(alphaRange.value);
+
+                    gl.uniform4f(u_FragColor, r, g, b, a);
+
+                    // 绘制三角形扇
+                    gl.drawArrays(gl.TRIANGLE_FAN, 0, vertexCount);
+                } else {
+                    // 使用顶点颜色着色器程序
+                    gl.useProgram(vertexProgram);
+
+                    // 设置顶点位置属性
+                    gl.vertexAttribPointer(a_Position_vertex, 2, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Position_vertex);
+
+                    // 设置顶点颜色属性
+                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, vertexColors, gl.STATIC_DRAW);
+                    gl.vertexAttribPointer(a_Color, 4, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(a_Color);
+
+                    // 绘制三角形扇
+                    gl.drawArrays(gl.TRIANGLE_FAN, 0, vertexCount);
+                }
+            }
+
+            // 创建着色器函数
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                // 检查着色器是否编译成功
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('着色器编译错误: ' + gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+
+                return shader;
+            }
+
+            // 创建程序函数
+            function createProgram(gl, vsSource, fsSource) {
+                const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                // 创建着色器程序
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragmentShader);
+                gl.linkProgram(program);
+
+                // 检查链接是否成功
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    console.error('无法初始化着色器程序: ' + gl.getProgramInfoLog(program));
+                    return null;
+                }
+
+                return program;
+            }
+
+            // HSL转RGB函数
+            function hslToRgb(h, s, l) {
+                let r, g, b;
+
+                if (s === 0) {
+                    r = g = b = l; // 灰色
+                } else {
+                    const hue2rgb = function (p, q, t) {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1 / 6) return p + (q - p) * 6 * t;
+                        if (t < 1 / 2) return q;
+                        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                        return p;
+                    };
+
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+
+                    r = hue2rgb(p, q, h + 1 / 3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1 / 3);
+                }
+
+                return [r, g, b];
+            }
+
+            // 更新颜色预览
+            function updateColorPreview() {
+                const r = Math.floor(parseFloat(redRange.value) * 255);
+                const g = Math.floor(parseFloat(greenRange.value) * 255);
+                const b = Math.floor(parseFloat(blueRange.value) * 255);
+                const a = parseFloat(alphaRange.value);
+
+                colorPreview.style.backgroundColor = `rgba(${r},${g},${b},${a})`;
+            }
+
+            // 更新HSL颜色预览
+            function updateHslPreview() {
+                const h = parseInt(hueRange.value);
+                const s = parseInt(satRange.value);
+                const l = parseInt(lightRange.value);
+
+                hslPreview.style.backgroundColor = `hsl(${h},${s}%,${l}%)`;
+
+                // 同步转换为RGB
+                const rgb = hslToRgb(h / 360, s / 100, l / 100);
+
+                redRange.value = rgb[0];
+                greenRange.value = rgb[1];
+                blueRange.value = rgb[2];
+
+                redValue.value = rgb[0];
+                greenValue.value = rgb[1];
+                blueValue.value = rgb[2];
+
+                updateColorPreview();
+            }
+
+            // 同步RGB输入值
+            function syncRgbInputs() {
+                redValue.value = redRange.value;
+                greenValue.value = greenRange.value;
+                blueValue.value = blueRange.value;
+                alphaValue.value = alphaRange.value;
+
+                updateColorPreview();
+            }
+
+            // 同步HSL输入值
+            function syncHslInputs() {
+                hueValue.value = hueRange.value;
+                satValue.value = satRange.value;
+                lightValue.value = lightRange.value;
+
+                updateHslPreview();
+            }
+
+            // 重置函数
+            function resetControls() {
+                redRange.value = 0.5;
+                greenRange.value = 0.3;
+                blueRange.value = 0.8;
+                alphaRange.value = 1.0;
+
+                hueRange.value = 270;
+                satRange.value = 60;
+                lightRange.value = 55;
+
+                syncRgbInputs();
+                syncHslInputs();
+
+                drawShape();
+            }
+
+            // 添加事件监听器
+            applyColorButton.addEventListener('click', drawShape);
+            resetButton.addEventListener('click', resetControls);
+            colorModeSelect.addEventListener('change', drawShape);
+
+            // RGB滑块事件
+            redRange.addEventListener('input', syncRgbInputs);
+            greenRange.addEventListener('input', syncRgbInputs);
+            blueRange.addEventListener('input', syncRgbInputs);
+            alphaRange.addEventListener('input', syncRgbInputs);
+
+            // RGB数值输入事件
+            redValue.addEventListener('change', function () {
+                redRange.value = this.value;
+                syncRgbInputs();
+            });
+
+            greenValue.addEventListener('change', function () {
+                greenRange.value = this.value;
+                syncRgbInputs();
+            });
+
+            blueValue.addEventListener('change', function () {
+                blueRange.value = this.value;
+                syncRgbInputs();
+            });
+
+            alphaValue.addEventListener('change', function () {
+                alphaRange.value = this.value;
+                syncRgbInputs();
+            });
+
+            // HSL滑块事件
+            hueRange.addEventListener('input', syncHslInputs);
+            satRange.addEventListener('input', syncHslInputs);
+            lightRange.addEventListener('input', syncHslInputs);
+
+            // HSL数值输入事件
+            hueValue.addEventListener('change', function () {
+                hueRange.value = this.value;
+                syncHslInputs();
+            });
+
+            satValue.addEventListener('change', function () {
+                satRange.value = this.value;
+                syncHslInputs();
+            });
+
+            lightValue.addEventListener('change', function () {
+                lightRange.value = this.value;
+                syncHslInputs();
+            });
+
+            // 初始化
+            syncRgbInputs();
+            syncHslInputs();
+            clearCanvas();
+            drawShape();
+        };
+    </script>
+</body>
+
+</html>
