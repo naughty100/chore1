@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL交互控制示例</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+
+        .instructions {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .instructions h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .info {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .object-list {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .object-item {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .object-item:hover {
+            background-color: #45a049;
+        }
+
+        .object-item.active {
+            background-color: #2196F3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>WebGL交互控制示例</h1>
+
+        <div class="instructions">
+            <h2>操作说明：</h2>
+            <ul>
+                <li><strong>点击对象</strong>：选择一个对象进行操作</li>
+                <li><strong>拖动</strong>：移动选中的对象</li>
+                <li><strong>滚轮</strong>：缩放选中的对象</li>
+                <li><strong>Shift+拖动</strong>：旋转选中的对象</li>
+            </ul>
+        </div>
+
+        <div class="object-list">
+            <button class="object-item" data-shape="square">正方形</button>
+            <button class="object-item" data-shape="triangle">三角形</button>
+            <button class="object-item" data-shape="circle">圆形</button>
+            <button class="object-item" data-shape="star">五角星</button>
+        </div>
+
+        <canvas id="glCanvas" width="600" height="400"></canvas>
+
+        <div class="info">
+            <p><strong>选中对象：</strong> <span id="selectedObject">无</span></p>
+            <p><strong>位置：</strong> X: <span id="posX">0.00</span>, Y: <span id="posY">0.00</span></p>
+            <p><strong>旋转：</strong> <span id="rotation">0</span>°</p>
+            <p><strong>缩放：</strong> <span id="scale">1.00</span></p>
+        </div>
+    </div>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec4 a_color;
+        uniform mat4 u_transformMatrix;
+        varying vec4 v_color;
+        
+        void main() {
+            gl_Position = u_transformMatrix * a_position;
+            v_color = a_color;
+        }
+    </script>
+
+    <!-- 片段着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 v_color;
+        
+        void main() {
+            gl_FragColor = v_color;
+        }
+    </script>
+
+    <script src="lib/matrix.js"></script>
+    <script>
+        // 获取canvas元素和WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            throw new Error('WebGL不可用');
+        }
+
+        // 初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            // 创建并编译顶点着色器
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, vsSource);
+            gl.compileShader(vertexShader);
+
+            if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                console.error('编译顶点着色器时出错:', gl.getShaderInfoLog(vertexShader));
+                gl.deleteShader(vertexShader);
+                return null;
+            }
+
+            // 创建并编译片段着色器
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, fsSource);
+            gl.compileShader(fragmentShader);
+
+            if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                console.error('编译片段着色器时出错:', gl.getShaderInfoLog(fragmentShader));
+                gl.deleteShader(fragmentShader);
+                return null;
+            }
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('链接着色器程序时出错:', gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 创建不同形状的顶点和颜色数据
+        function createShapeData(shape) {
+            let positions = [];
+            let colors = [];
+            let indices = [];
+
+            switch (shape) {
+                case 'square':
+                    // 正方形顶点 (2D)
+                    positions = [
+                        -0.1, -0.1,  // 左下
+                        0.1, -0.1,  // 右下
+                        0.1, 0.1,  // 右上
+                        -0.1, 0.1   // 左上
+                    ];
+
+                    // 正方形颜色 (红色)
+                    colors = [
+                        1.0, 0.0, 0.0, 1.0,  // 红色
+                        1.0, 0.0, 0.0, 1.0,  // 红色
+                        1.0, 0.0, 0.0, 1.0,  // 红色
+                        1.0, 0.0, 0.0, 1.0   // 红色
+                    ];
+
+                    // 正方形索引
+                    indices = [
+                        0, 1, 2,  // 第一个三角形
+                        0, 2, 3   // 第二个三角形
+                    ];
+                    break;
+
+                case 'triangle':
+                    // 三角形顶点
+                    positions = [
+                        -0.1, -0.1,  // 左下
+                        0.1, -0.1,  // 右下
+                        0.0, 0.1   // 顶部
+                    ];
+
+                    // 三角形颜色 (绿色)
+                    colors = [
+                        0.0, 1.0, 0.0, 1.0,  // 绿色
+                        0.0, 1.0, 0.0, 1.0,  // 绿色
+                        0.0, 1.0, 0.0, 1.0   // 绿色
+                    ];
+
+                    // 三角形索引
+                    indices = [0, 1, 2];
+                    break;
+
+                case 'circle':
+                    // 圆形顶点
+                    const segments = 32;
+                    const radius = 0.1;
+
+                    // 添加中心点
+                    positions.push(0, 0);
+                    colors.push(0.0, 0.0, 1.0, 1.0);  // 蓝色
+
+                    // 添加圆周上的点
+                    for (let i = 0; i <= segments; i++) {
+                        const theta = (i % segments) * 2.0 * Math.PI / segments;
+                        const x = radius * Math.cos(theta);
+                        const y = radius * Math.sin(theta);
+
+                        positions.push(x, y);
+                        colors.push(0.0, 0.0, 1.0, 1.0);  // 蓝色
+
+                        // 添加三角形索引
+                        if (i > 0) {
+                            indices.push(0, i, i + 1);
+                        }
+                    }
+                    break;
+
+                case 'star':
+                    // 五角星顶点
+                    const innerRadius = 0.04;
+                    const outerRadius = 0.1;
+                    const numPoints = 5;
+
+                    for (let i = 0; i < numPoints * 2; i++) {
+                        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                        const angle = (Math.PI / numPoints) * i;
+                        const x = radius * Math.sin(angle);
+                        const y = radius * Math.cos(angle);
+                        positions.push(x, y);
+                        colors.push(1.0, 1.0, 0.0, 1.0);  // 黄色
+                    }
+
+                    // 添加中心点
+                    positions.push(0, 0);
+                    colors.push(1.0, 1.0, 0.0, 1.0);  // 黄色
+
+                    // 五角星索引
+                    const centerIndex = numPoints * 2;
+                    for (let i = 0; i < numPoints * 2; i++) {
+                        indices.push(i, (i + 1) % (numPoints * 2), centerIndex);
+                    }
+                    break;
+            }
+
+            return { positions, colors, indices };
+        }
+
+        // 创建缓冲区
+        function createBuffers(gl, shape) {
+            const { positions, colors, indices } = createShapeData(shape);
+
+            // 创建和绑定位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建和绑定颜色缓冲区
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            // 创建和绑定索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                color: colorBuffer,
+                indices: indexBuffer,
+                count: indices.length,
+                vertexCount: positions.length / 2  // 每个顶点有2个分量
+            };
+        }
+
+        // 绘制对象
+        function drawObject(gl, programInfo, buffers, object) {
+            // 绑定位置缓冲区并设置属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.position,
+                2,        // 每个顶点2个坐标分量
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+            // 绑定颜色缓冲区并设置属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.color,
+                4,        // 每个顶点4个颜色分量 (RGBA)
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.color);
+
+            // 绑定索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+            // 创建变换矩阵
+            const transformMatrix = createTransformMatrix(
+                object.x, object.y, object.rotation, object.scale, object.scale
+            );
+
+            // 设置变换矩阵
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.transformMatrix,
+                false,
+                transformMatrix
+            );
+
+            // 绘制索引
+            gl.drawElements(
+                gl.TRIANGLES,
+                buffers.count,
+                gl.UNSIGNED_SHORT,
+                0
+            );
+        }
+
+        // 绘制场景
+        function drawScene(gl, programInfo, objects, selectedId) {
+            // 清除画布
+            gl.clearColor(0.9, 0.9, 0.9, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 启用着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 绘制所有对象
+            for (const id in objects) {
+                const object = objects[id];
+
+                // 如果是选中的对象，绘制边框（可以通过放大一点并改变颜色来实现）
+                if (id === selectedId) {
+                    // 先绘制对象本身
+                    drawObject(gl, programInfo, object.buffers, object);
+
+                    // TODO: 如果需要，可以在这里添加选中对象的特殊效果
+                } else {
+                    // 绘制普通对象
+                    drawObject(gl, programInfo, object.buffers, object);
+                }
+            }
+        }
+
+        // 坐标转换：屏幕坐标转换为WebGL坐标
+        function toWebGLCoords(event, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            return { x, y };
+        }
+
+        // 检测点击是否在对象上
+        function isPointInObject(point, object) {
+            // 转换点到对象的局部坐标
+            // 注意：这只是一个简化的碰撞检测，实际应用中可能需要更复杂的算法
+            const dx = point.x - object.x;
+            const dy = point.y - object.y;
+
+            // 旋转点以考虑对象的旋转
+            const angleRadians = -object.rotation * Math.PI / 180;
+            const rotatedX = dx * Math.cos(angleRadians) - dy * Math.sin(angleRadians);
+            const rotatedY = dx * Math.sin(angleRadians) + dy * Math.cos(angleRadians);
+
+            // 考虑对象的缩放
+            const scaledX = rotatedX / object.scale;
+            const scaledY = rotatedY / object.scale;
+
+            // 根据形状类型检测碰撞
+            switch (object.shape) {
+                case 'square':
+                    return Math.abs(scaledX) <= 0.1 && Math.abs(scaledY) <= 0.1;
+
+                case 'triangle':
+                    // 简化：检查点是否在三角形的外接圆内
+                    return Math.sqrt(scaledX * scaledX + scaledY * scaledY) <= 0.15;
+
+                case 'circle':
+                    return Math.sqrt(scaledX * scaledX + scaledY * scaledY) <= 0.1;
+
+                case 'star':
+                    // 简化：检查点是否在星形的外接圆内
+                    return Math.sqrt(scaledX * scaledX + scaledY * scaledY) <= 0.12;
+
+                default:
+                    return false;
+            }
+        }
+
+        // 更新信息显示
+        function updateInfoDisplay(object) {
+            document.getElementById('selectedObject').textContent =
+                object ? {
+                    'square': '正方形',
+                    'triangle': '三角形',
+                    'circle': '圆形',
+                    'star': '五角星'
+                }[object.shape] : '无';
+
+            document.getElementById('posX').textContent = object ? object.x.toFixed(2) : '0.00';
+            document.getElementById('posY').textContent = object ? object.y.toFixed(2) : '0.00';
+            document.getElementById('rotation').textContent = object ? Math.round(object.rotation) : '0';
+            document.getElementById('scale').textContent = object ? object.scale.toFixed(2) : '1.00';
+        }
+
+        // 主函数
+        function main() {
+            // 获取着色器源代码
+            const vsSource = document.getElementById('vertex-shader').textContent;
+            const fsSource = document.getElementById('fragment-shader').textContent;
+
+            // 初始化着色器程序
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            // 收集程序信息
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    position: gl.getAttribLocation(shaderProgram, 'a_position'),
+                    color: gl.getAttribLocation(shaderProgram, 'a_color')
+                },
+                uniformLocations: {
+                    transformMatrix: gl.getUniformLocation(shaderProgram, 'u_transformMatrix')
+                }
+            };
+
+            // 创建对象
+            const objects = {};
+            let nextId = 1;
+            let selectedObjectId = null;
+
+            // 鼠标交互状态
+            let isDragging = false;
+            let isRotating = false;
+            let lastX = 0;
+            let lastY = 0;
+
+            // 创建初始对象 - 一个正方形
+            createObject('square', 0, 0);
+
+            // 绘制初始场景
+            drawScene(gl, programInfo, objects, selectedObjectId);
+            updateInfoDisplay(null);
+
+            // 对象按钮点击事件
+            document.querySelectorAll('.object-item').forEach(button => {
+                button.addEventListener('click', function () {
+                    const shape = this.getAttribute('data-shape');
+                    createObject(shape, 0, 0);
+                    drawScene(gl, programInfo, objects, selectedObjectId);
+                });
+            });
+
+            // 创建新对象函数
+            function createObject(shape, x, y) {
+                const id = 'obj_' + nextId++;
+                const buffers = createBuffers(gl, shape);
+
+                objects[id] = {
+                    shape: shape,
+                    x: x,
+                    y: y,
+                    rotation: 0,
+                    scale: 1,
+                    buffers: buffers
+                };
+
+                // 自动选择新创建的对象
+                selectedObjectId = id;
+                updateActiveButtons();
+                updateInfoDisplay(objects[selectedObjectId]);
+
+                return id;
+            }
+
+            // 更新活动按钮状态
+            function updateActiveButtons() {
+                document.querySelectorAll('.object-item').forEach(button => {
+                    const shape = button.getAttribute('data-shape');
+                    if (selectedObjectId && objects[selectedObjectId].shape === shape) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                });
+            }
+
+            // 鼠标按下事件
+            canvas.addEventListener('mousedown', function (event) {
+                const coords = toWebGLCoords(event, canvas);
+                lastX = coords.x;
+                lastY = coords.y;
+
+                // 检查点击是否在某个对象上
+                let clickedObjectId = null;
+                for (const id in objects) {
+                    if (isPointInObject(coords, objects[id])) {
+                        clickedObjectId = id;
+                        break;
+                    }
+                }
+
+                if (clickedObjectId) {
+                    selectedObjectId = clickedObjectId;
+                    updateActiveButtons();
+                    updateInfoDisplay(objects[selectedObjectId]);
+
+                    isDragging = true;
+                    isRotating = event.shiftKey;  // 如果按住Shift，则进行旋转
+                } else {
+                    selectedObjectId = null;
+                    updateActiveButtons();
+                    updateInfoDisplay(null);
+                }
+
+                drawScene(gl, programInfo, objects, selectedObjectId);
+            });
+
+            // 鼠标移动事件
+            window.addEventListener('mousemove', function (event) {
+                if (isDragging && selectedObjectId) {
+                    const coords = toWebGLCoords(event, canvas);
+                    const dx = coords.x - lastX;
+                    const dy = coords.y - lastY;
+
+                    if (isRotating) {
+                        // 旋转选中的对象
+                        objects[selectedObjectId].rotation += dx * 100;  // 控制旋转速度
+                    } else {
+                        // 移动选中的对象
+                        objects[selectedObjectId].x += dx;
+                        objects[selectedObjectId].y += dy;
+                    }
+
+                    // 更新信息显示
+                    updateInfoDisplay(objects[selectedObjectId]);
+
+                    // 重绘场景
+                    drawScene(gl, programInfo, objects, selectedObjectId);
+
+                    lastX = coords.x;
+                    lastY = coords.y;
+                }
+            });
+
+            // 鼠标释放事件
+            window.addEventListener('mouseup', function () {
+                isDragging = false;
+                isRotating = false;
+            });
+
+            // 鼠标滚轮事件 - 缩放对象
+            canvas.addEventListener('wheel', function (event) {
+                if (selectedObjectId) {
+                    // 阻止默认的滚动行为
+                    event.preventDefault();
+
+                    // 缩放选中的对象
+                    const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;  // 根据滚动方向确定缩放比例
+                    objects[selectedObjectId].scale *= scaleFactor;
+
+                    // 限制最小和最大缩放
+                    objects[selectedObjectId].scale = Math.max(0.1, Math.min(5.0, objects[selectedObjectId].scale));
+
+                    // 更新信息显示
+                    updateInfoDisplay(objects[selectedObjectId]);
+
+                    // 重绘场景
+                    drawScene(gl, programInfo, objects, selectedObjectId);
+                }
+            });
+        }
+
+        // 启动主函数
+        main();
+    </script>
+</body>
+
+</html>
