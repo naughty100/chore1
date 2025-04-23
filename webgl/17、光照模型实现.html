@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL光照 - 光照模型实现</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        select,
+        input[type="color"],
+        input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        input[type="color"] {
+            height: 40px;
+        }
+
+        .light-specific {
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>WebGL光照 - 光照模型实现</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="lightType">光源类型:</label>
+                <select id="lightType">
+                    <option value="point" selected>点光源 (Point Light)</option>
+                    <option value="directional">平行光 (Directional Light)</option>
+                </select>
+            </div>
+
+            <div class="light-specific" id="pointLightControls">
+                <label>点光源位置: <span id="pointPosValue">[1, 1, 2]</span></label>
+                X: <input type="range" id="pointX" min="-5" max="5" step="0.1" value="1.0"><br>
+                Y: <input type="range" id="pointY" min="-5" max="5" step="0.1" value="1.0"><br>
+                Z: <input type="range" id="pointZ" min="-5" max="5" step="0.1" value="2.0">
+            </div>
+
+            <div class="light-specific" id="directionalLightControls" style="display: none;">
+                <label>平行光方向: <span id="dirValue">[0, -1, -1]</span></label>
+                X: <input type="range" id="dirX" min="-1" max="1" step="0.1" value="0.0"><br>
+                Y: <input type="range" id="dirY" min="-1" max="1" step="0.1" value="-1.0"><br>
+                Z: <input type="range" id="dirZ" min="-1" max="1" step="0.1" value="-1.0">
+            </div>
+
+            <div class="control-group">
+                <label for="lightColor">光源颜色:</label>
+                <input type="color" id="lightColor" value="#ffffff">
+            </div>
+            <div class="control-group">
+                <label for="ambientIntensity">环境光强度: <span id="ambientValue">0.20</span></label>
+                <input type="range" id="ambientIntensity" min="0" max="1" step="0.01" value="0.2">
+            </div>
+
+            <hr>
+
+            <div class="control-group">
+                <label for="materialSelect">材质:</label>
+                <select id="materialSelect">
+                    <option value="gold" selected>黄金 (Gold)</option>
+                    <option value="silver">白银 (Silver)</option>
+                    <option value="bronze">青铜 (Bronze)</option>
+                    <option value="ruby">红宝石 (Ruby)</option>
+                    <option value="plastic_white">白色塑料 (White Plastic)</option>
+                    <option value="rubber_red">红色橡胶 (Red Rubber)</option>
+                </select>
+            </div>
+        </div>
+
+        <canvas id="glCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec3 a_normal;
+        
+        uniform mat4 u_modelMatrix;
+        uniform mat4 u_viewMatrix;
+        uniform mat4 u_projectionMatrix;
+        uniform mat3 u_normalMatrix;
+        
+        varying vec3 v_normal;
+        varying vec3 v_fragPos;
+        
+        void main() {
+            v_fragPos = vec3(u_modelMatrix * a_position);
+            v_normal = normalize(u_normalMatrix * a_normal);
+            gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;
+        }
+    </script>
+
+    <!-- 片段着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        struct Material {
+            vec3 ambient;
+            vec3 diffuse;
+            vec3 specular;
+            float shininess;
+        };
+        
+        struct Light {
+            vec3 position;
+            vec3 direction;
+            vec3 color;
+            float ambientIntensity;
+            int type; // 0: Directional, 1: Point
+        };
+        
+        uniform Material u_material;
+        uniform Light u_light;
+        uniform vec3 u_viewPos;
+        
+        varying vec3 v_normal;
+        varying vec3 v_fragPos;
+        
+        // 计算Blinn-Phong光照
+        vec3 calculateLight(Light light, Material mat, vec3 normal, vec3 fragPos, vec3 viewDir) {
+            vec3 lightDir;
+            if (light.type == 0) { // Directional
+                lightDir = normalize(-light.direction);
+            } else { // Point
+                lightDir = normalize(light.position - fragPos);
+            }
+            
+            // Ambient
+            vec3 ambient = light.ambientIntensity * light.color * mat.ambient;
+            
+            // Diffuse
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = diff * light.color * mat.diffuse;
+            
+            // Specular (Blinn-Phong)
+            vec3 halfwayDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfwayDir), 0.0), mat.shininess);
+            vec3 specular = spec * light.color * mat.specular;
+            
+            return (ambient + diffuse + specular);
+        }
+        
+        void main() {
+            vec3 norm = normalize(v_normal);
+            vec3 viewDir = normalize(u_viewPos - v_fragPos);
+            
+            vec3 result = calculateLight(u_light, u_material, norm, v_fragPos, viewDir);
+            
+            gl_FragColor = vec4(result, 1.0);
+        }
+    </script>
+
+    <script src="lib/matrix.js"></script>
+    <script src="lib/materials.js"></script>
+    <script>
+        // 获取canvas元素和WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            throw new Error('WebGL不可用');
+        }
+
+        // ---- WebGL初始化辅助函数 ----
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('链接着色器程序失败: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+            return shaderProgram;
+        }
+
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('编译着色器失败: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        // ---- 几何体和缓冲区 ----
+        function initBuffers(gl) {
+            // 使用球体
+            const { vertices, normals, indices } = createSphere(1.0, 64, 64);
+
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+            const normalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                normal: normalBuffer,
+                indices: indexBuffer,
+                count: indices.length
+            };
+        }
+
+        // 创建球体数据
+        function createSphere(radius, latitudeBands, longitudeBands) {
+            const vertices = [];
+            const normals = [];
+            const indices = [];
+
+            for (let latNumber = 0; latNumber <= latitudeBands; latNumber++) {
+                const theta = latNumber * Math.PI / latitudeBands;
+                const sinTheta = Math.sin(theta);
+                const cosTheta = Math.cos(theta);
+
+                for (let longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+                    const phi = longNumber * 2 * Math.PI / longitudeBands;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+
+                    const x = cosPhi * sinTheta;
+                    const y = cosTheta;
+                    const z = sinPhi * sinTheta;
+
+                    normals.push(x, y, z);
+                    vertices.push(radius * x, radius * y, radius * z);
+                }
+            }
+
+            for (let latNumber = 0; latNumber < latitudeBands; latNumber++) {
+                for (let longNumber = 0; longNumber < longitudeBands; longNumber++) {
+                    const first = (latNumber * (longitudeBands + 1)) + longNumber;
+                    const second = first + longitudeBands + 1;
+                    indices.push(first, second, first + 1);
+                    indices.push(second, second + 1, first + 1);
+                }
+            }
+
+            return { vertices, normals, indices };
+        }
+
+        // ---- 颜色转换 ----
+        function hexToRgb(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+                r = parseInt(hex.substring(1, 3), 16);
+                g = parseInt(hex.substring(3, 5), 16);
+                b = parseInt(hex.substring(5, 7), 16);
+            }
+            return [r / 255, g / 255, b / 255];
+        }
+
+        // ---- 主程序 ----
+        function main() {
+            const vsSource = document.getElementById('vertex-shader').textContent;
+            const fsSource = document.getElementById('fragment-shader').textContent;
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    position: gl.getAttribLocation(shaderProgram, 'a_position'),
+                    normal: gl.getAttribLocation(shaderProgram, 'a_normal'),
+                },
+                uniformLocations: {
+                    modelMatrix: gl.getUniformLocation(shaderProgram, 'u_modelMatrix'),
+                    viewMatrix: gl.getUniformLocation(shaderProgram, 'u_viewMatrix'),
+                    projectionMatrix: gl.getUniformLocation(shaderProgram, 'u_projectionMatrix'),
+                    normalMatrix: gl.getUniformLocation(shaderProgram, 'u_normalMatrix'),
+                    material: {
+                        ambient: gl.getUniformLocation(shaderProgram, 'u_material.ambient'),
+                        diffuse: gl.getUniformLocation(shaderProgram, 'u_material.diffuse'),
+                        specular: gl.getUniformLocation(shaderProgram, 'u_material.specular'),
+                        shininess: gl.getUniformLocation(shaderProgram, 'u_material.shininess'),
+                    },
+                    light: {
+                        position: gl.getUniformLocation(shaderProgram, 'u_light.position'),
+                        direction: gl.getUniformLocation(shaderProgram, 'u_light.direction'),
+                        color: gl.getUniformLocation(shaderProgram, 'u_light.color'),
+                        ambientIntensity: gl.getUniformLocation(shaderProgram, 'u_light.ambientIntensity'),
+                        type: gl.getUniformLocation(shaderProgram, 'u_light.type'),
+                    },
+                    viewPos: gl.getUniformLocation(shaderProgram, 'u_viewPos'),
+                },
+            };
+
+            const buffers = initBuffers(gl);
+
+            // 状态
+            const light = {
+                type: 1, // 0: Directional, 1: Point
+                position: [1.0, 1.0, 2.0],
+                direction: [0.0, -1.0, -1.0],
+                color: [1.0, 1.0, 1.0],
+                ambientIntensity: 0.2
+            };
+            let currentMaterial = materials['gold'];
+            let cameraAngleX = 0.3, cameraAngleY = 0.5, cameraDistance = 4;
+            let isDragging = false, lastMouseX = 0, lastMouseY = 0;
+
+            // ---- 绘制函数 ----
+            function draw() {
+                gl.clearColor(0.1, 0.1, 0.1, 1.0);
+                gl.clearDepth(1.0);
+                gl.enable(gl.DEPTH_TEST);
+                gl.depthFunc(gl.LEQUAL);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                const fieldOfView = 45 * Math.PI / 180;
+                const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+                const projectionMatrix = createPerspectiveMatrix(fieldOfView, aspect, 0.1, 100.0);
+
+                const camX = cameraDistance * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
+                const camY = cameraDistance * Math.sin(cameraAngleX);
+                const camZ = cameraDistance * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
+                const cameraPosition = [camX, camY, camZ];
+                const viewMatrix = createLookAtMatrix(cameraPosition, [0, 0, 0], [0, 1, 0]);
+
+                const modelMatrix = createIdentityMatrix();
+                const normalMatrix = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]); // Simplified
+
+                gl.useProgram(programInfo.program);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(programInfo.attribLocations.position, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+                gl.vertexAttribPointer(programInfo.attribLocations.normal, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(programInfo.attribLocations.normal);
+
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+                // Matrices
+                gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.viewMatrix, false, viewMatrix);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.modelMatrix, false, modelMatrix);
+                gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
+
+                // Material
+                gl.uniform3fv(programInfo.uniformLocations.material.ambient, currentMaterial.ambient);
+                gl.uniform3fv(programInfo.uniformLocations.material.diffuse, currentMaterial.diffuse);
+                gl.uniform3fv(programInfo.uniformLocations.material.specular, currentMaterial.specular);
+                gl.uniform1f(programInfo.uniformLocations.material.shininess, currentMaterial.shininess);
+
+                // Light
+                gl.uniform3fv(programInfo.uniformLocations.light.position, light.position);
+                gl.uniform3fv(programInfo.uniformLocations.light.direction, light.direction);
+                gl.uniform3fv(programInfo.uniformLocations.light.color, light.color);
+                gl.uniform1f(programInfo.uniformLocations.light.ambientIntensity, light.ambientIntensity);
+                gl.uniform1i(programInfo.uniformLocations.light.type, light.type);
+
+                gl.uniform3fv(programInfo.uniformLocations.viewPos, cameraPosition);
+
+                gl.drawElements(gl.TRIANGLES, buffers.count, gl.UNSIGNED_SHORT, 0);
+            }
+
+            // ---- 事件处理 ----
+            const lightTypeSelect = document.getElementById('lightType');
+            const pointControls = document.getElementById('pointLightControls');
+            const dirControls = document.getElementById('directionalLightControls');
+            const pointXSlider = document.getElementById('pointX');
+            const pointYSlider = document.getElementById('pointY');
+            const pointZSlider = document.getElementById('pointZ');
+            const dirXSlider = document.getElementById('dirX');
+            const dirYSlider = document.getElementById('dirY');
+            const dirZSlider = document.getElementById('dirZ');
+            const lightColorPicker = document.getElementById('lightColor');
+            const ambientSlider = document.getElementById('ambientIntensity');
+            const materialSelect = document.getElementById('materialSelect');
+
+            const pointPosValue = document.getElementById('pointPosValue');
+            const dirValue = document.getElementById('dirValue');
+            const ambientValue = document.getElementById('ambientValue');
+
+            function updateLightControls() {
+                if (light.type === 1) { // Point
+                    pointControls.style.display = 'block';
+                    dirControls.style.display = 'none';
+                } else { // Directional
+                    pointControls.style.display = 'none';
+                    dirControls.style.display = 'block';
+                }
+            }
+
+            function updatePointPosValue() {
+                pointPosValue.textContent = `[${light.position[0].toFixed(1)}, ${light.position[1].toFixed(1)}, ${light.position[2].toFixed(1)}]`;
+            }
+            function updateDirValue() {
+                dirValue.textContent = `[${light.direction[0].toFixed(1)}, ${light.direction[1].toFixed(1)}, ${light.direction[2].toFixed(1)}]`;
+            }
+
+            lightTypeSelect.addEventListener('change', (e) => {
+                light.type = (e.target.value === 'point') ? 1 : 0;
+                updateLightControls();
+                draw();
+            });
+
+            pointXSlider.addEventListener('input', (e) => { light.position[0] = parseFloat(e.target.value); updatePointPosValue(); draw(); });
+            pointYSlider.addEventListener('input', (e) => { light.position[1] = parseFloat(e.target.value); updatePointPosValue(); draw(); });
+            pointZSlider.addEventListener('input', (e) => { light.position[2] = parseFloat(e.target.value); updatePointPosValue(); draw(); });
+
+            dirXSlider.addEventListener('input', (e) => { light.direction[0] = parseFloat(e.target.value); updateDirValue(); draw(); });
+            dirYSlider.addEventListener('input', (e) => { light.direction[1] = parseFloat(e.target.value); updateDirValue(); draw(); });
+            dirZSlider.addEventListener('input', (e) => { light.direction[2] = parseFloat(e.target.value); updateDirValue(); draw(); });
+
+            lightColorPicker.addEventListener('input', (e) => { light.color = hexToRgb(e.target.value); draw(); });
+            ambientSlider.addEventListener('input', (e) => { light.ambientIntensity = parseFloat(e.target.value); ambientValue.textContent = light.ambientIntensity.toFixed(2); draw(); });
+            materialSelect.addEventListener('change', (e) => { currentMaterial = materials[e.target.value]; draw(); });
+
+            // 鼠标控制相机
+            canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; canvas.style.cursor = 'grabbing'; });
+            canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                cameraAngleY += deltaX * 0.01;
+                cameraAngleX += deltaY * 0.01;
+                cameraAngleX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraAngleX));
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                draw();
+            });
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                cameraDistance += e.deltaY * 0.01;
+                cameraDistance = Math.max(1.5, Math.min(10, cameraDistance));
+                draw();
+            });
+
+            // 初始化
+            updateLightControls();
+            updatePointPosValue();
+            updateDirValue();
+            if (typeof materials !== 'undefined') {
+                draw();
+            } else {
+                console.error("材质数据未加载！");
+            }
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
