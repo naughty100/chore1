@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL光照 - 法线和材质</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .material-details {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            border: 1px solid #eee;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>WebGL光照 - 法线和材质</h1>
+
+        <div class="controls">
+            <h2>选择材质</h2>
+            <div class="control-group">
+                <label for="materialSelect">预设材质:</label>
+                <select id="materialSelect">
+                    <option value="emerald">绿宝石 (Emerald)</option>
+                    <option value="jade">翡翠 (Jade)</option>
+                    <option value="obsidian">黑曜石 (Obsidian)</option>
+                    <option value="pearl">珍珠 (Pearl)</option>
+                    <option value="ruby">红宝石 (Ruby)</option>
+                    <option value="turquoise">绿松石 (Turquoise)</option>
+                    <option value="brass">黄铜 (Brass)</option>
+                    <option value="bronze">青铜 (Bronze)</option>
+                    <option value="chrome">铬 (Chrome)</option>
+                    <option value="copper">铜 (Copper)</option>
+                    <option value="gold" selected>黄金 (Gold)</option>
+                    <option value="silver">白银 (Silver)</option>
+                    <option value="plastic_black">黑色塑料 (Black Plastic)</option>
+                    <option value="plastic_cyan">青色塑料 (Cyan Plastic)</option>
+                    <option value="plastic_green">绿色塑料 (Green Plastic)</option>
+                    <option value="plastic_red">红色塑料 (Red Plastic)</option>
+                    <option value="plastic_white">白色塑料 (White Plastic)</option>
+                    <option value="plastic_yellow">黄色塑料 (Yellow Plastic)</option>
+                    <option value="rubber_black">黑色橡胶 (Black Rubber)</option>
+                    <option value="rubber_cyan">青色橡胶 (Cyan Rubber)</option>
+                    <option value="rubber_green">绿色橡胶 (Green Rubber)</option>
+                    <option value="rubber_red">红色橡胶 (Red Rubber)</option>
+                    <option value="rubber_white">白色橡胶 (White Rubber)</option>
+                    <option value="rubber_yellow">黄色橡胶 (Yellow Rubber)</option>
+                </select>
+            </div>
+            <div class="material-details">
+                <strong>当前材质属性:</strong><br>
+                <span id="ambientColor">环境色: <span class="color-swatch"></span><span class="value"></span></span><br>
+                <span id="diffuseColor">漫反射色: <span class="color-swatch"></span><span class="value"></span></span><br>
+                <span id="specularColor">高光色: <span class="color-swatch"></span><span class="value"></span></span><br>
+                <span id="shininess">高光系数: <span class="value"></span></span>
+            </div>
+        </div>
+
+        <canvas id="glCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec3 a_normal;
+        
+        uniform mat4 u_modelMatrix;
+        uniform mat4 u_viewMatrix;
+        uniform mat4 u_projectionMatrix;
+        uniform mat3 u_normalMatrix; // 法线矩阵 (模型矩阵的逆转置3x3)
+        
+        varying vec3 v_normal;
+        varying vec3 v_fragPos; // 片段在世界坐标系中的位置
+        
+        void main() {
+            // 计算世界坐标系中的位置
+            v_fragPos = vec3(u_modelMatrix * a_position);
+            
+            // 转换法线到世界坐标系
+            v_normal = normalize(u_normalMatrix * a_normal);
+            
+            // 计算裁剪空间坐标
+            gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;
+        }
+    </script>
+
+    <!-- 片段着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        struct Material {
+            vec3 ambient;
+            vec3 diffuse;
+            vec3 specular;
+            float shininess;
+        };
+        
+        struct Light {
+            vec3 position; // 世界坐标
+            vec3 color;
+            float ambientIntensity;
+        };
+        
+        uniform Material u_material;
+        uniform Light u_light;
+        uniform vec3 u_viewPos;  // 观察者（相机）在世界坐标系中的位置
+        
+        varying vec3 v_normal;
+        varying vec3 v_fragPos;
+        
+        void main() {
+            // 1. 环境光 (Ambient)
+            vec3 ambient = u_light.ambientIntensity * u_light.color * u_material.ambient;
+            
+            // 2. 漫反射 (Diffuse)
+            vec3 norm = normalize(v_normal);
+            vec3 lightDir = normalize(u_light.position - v_fragPos);
+            float diff = max(dot(norm, lightDir), 0.0);
+            vec3 diffuse = diff * u_light.color * u_material.diffuse;
+            
+            // 3. 镜面反射 (Specular)
+            vec3 viewDir = normalize(u_viewPos - v_fragPos);
+            vec3 reflectDir = reflect(-lightDir, norm);
+            // 使用Blinn-Phong模型优化
+            // vec3 halfwayDir = normalize(lightDir + viewDir);
+            // float spec = pow(max(dot(norm, halfwayDir), 0.0), u_material.shininess);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), u_material.shininess);
+            vec3 specular = spec * u_light.color * u_material.specular;
+            
+            // 合并结果
+            vec3 result = ambient + diffuse + specular;
+            gl_FragColor = vec4(result, 1.0);
+        }
+    </script>
+
+    <script src="lib/matrix.js"></script>
+    <script src="lib/materials.js"></script> // 加载材质数据
+    <script>
+        // 获取canvas元素和WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            throw new Error('WebGL不可用');
+        }
+
+        // ---- WebGL初始化辅助函数 ----
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('链接着色器程序失败: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+            return shaderProgram;
+        }
+
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('编译着色器失败: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        // ---- 几何体和缓冲区 ----
+        function initBuffers(gl) {
+            // 使用更平滑的球体代替立方体
+            const { vertices, normals, indices } = createSphere(1.0, 64, 64);
+
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+            const normalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                normal: normalBuffer,
+                indices: indexBuffer,
+                count: indices.length
+            };
+        }
+
+        // 创建球体数据
+        function createSphere(radius, latitudeBands, longitudeBands) {
+            const vertices = [];
+            const normals = [];
+            const indices = [];
+
+            for (let latNumber = 0; latNumber <= latitudeBands; latNumber++) {
+                const theta = latNumber * Math.PI / latitudeBands;
+                const sinTheta = Math.sin(theta);
+                const cosTheta = Math.cos(theta);
+
+                for (let longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+                    const phi = longNumber * 2 * Math.PI / longitudeBands;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+
+                    const x = cosPhi * sinTheta;
+                    const y = cosTheta;
+                    const z = sinPhi * sinTheta;
+
+                    normals.push(x, y, z);
+                    vertices.push(radius * x, radius * y, radius * z);
+                }
+            }
+
+            for (let latNumber = 0; latNumber < latitudeBands; latNumber++) {
+                for (let longNumber = 0; longNumber < longitudeBands; longNumber++) {
+                    const first = (latNumber * (longitudeBands + 1)) + longNumber;
+                    const second = first + longitudeBands + 1;
+                    indices.push(first, second, first + 1);
+                    indices.push(second, second + 1, first + 1);
+                }
+            }
+
+            return { vertices, normals, indices };
+        }
+
+        // ---- 主程序 ----
+        function main() {
+            const vsSource = document.getElementById('vertex-shader').textContent;
+            const fsSource = document.getElementById('fragment-shader').textContent;
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    position: gl.getAttribLocation(shaderProgram, 'a_position'),
+                    normal: gl.getAttribLocation(shaderProgram, 'a_normal'),
+                },
+                uniformLocations: {
+                    modelMatrix: gl.getUniformLocation(shaderProgram, 'u_modelMatrix'),
+                    viewMatrix: gl.getUniformLocation(shaderProgram, 'u_viewMatrix'),
+                    projectionMatrix: gl.getUniformLocation(shaderProgram, 'u_projectionMatrix'),
+                    normalMatrix: gl.getUniformLocation(shaderProgram, 'u_normalMatrix'),
+                    material: {
+                        ambient: gl.getUniformLocation(shaderProgram, 'u_material.ambient'),
+                        diffuse: gl.getUniformLocation(shaderProgram, 'u_material.diffuse'),
+                        specular: gl.getUniformLocation(shaderProgram, 'u_material.specular'),
+                        shininess: gl.getUniformLocation(shaderProgram, 'u_material.shininess'),
+                    },
+                    light: {
+                        position: gl.getUniformLocation(shaderProgram, 'u_light.position'),
+                        color: gl.getUniformLocation(shaderProgram, 'u_light.color'),
+                        ambientIntensity: gl.getUniformLocation(shaderProgram, 'u_light.ambientIntensity'),
+                    },
+                    viewPos: gl.getUniformLocation(shaderProgram, 'u_viewPos'),
+                },
+            };
+
+            const buffers = initBuffers(gl);
+
+            // 光源和相机状态
+            const light = {
+                position: [3.0, 3.0, 4.0],
+                color: [1.0, 1.0, 1.0],
+                ambientIntensity: 0.2
+            };
+
+            let cameraAngleX = 0.3;
+            let cameraAngleY = 0.5;
+            let cameraDistance = 4;
+            let isDragging = false;
+            let lastMouseX = 0, lastMouseY = 0;
+
+            // 当前材质
+            let currentMaterial = materials['gold']; // 默认黄金
+
+            // 更新材质信息显示
+            function updateMaterialDisplay() {
+                const ambientSpan = document.getElementById('ambientColor');
+                const diffuseSpan = document.getElementById('diffuseColor');
+                const specularSpan = document.getElementById('specularColor');
+                const shininessSpan = document.getElementById('shininess');
+
+                const formatColor = (c) => `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
+                const formatVec = (v) => `[${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)}]`;
+
+                ambientSpan.querySelector('.color-swatch').style.backgroundColor = formatColor(currentMaterial.ambient);
+                ambientSpan.querySelector('.value').textContent = formatVec(currentMaterial.ambient);
+                diffuseSpan.querySelector('.color-swatch').style.backgroundColor = formatColor(currentMaterial.diffuse);
+                diffuseSpan.querySelector('.value').textContent = formatVec(currentMaterial.diffuse);
+                specularSpan.querySelector('.color-swatch').style.backgroundColor = formatColor(currentMaterial.specular);
+                specularSpan.querySelector('.value').textContent = formatVec(currentMaterial.specular);
+                shininessSpan.querySelector('.value').textContent = currentMaterial.shininess.toFixed(1);
+            }
+
+            // ---- 绘制函数 ----
+            function draw() {
+                gl.clearColor(0.1, 0.1, 0.1, 1.0);
+                gl.clearDepth(1.0);
+                gl.enable(gl.DEPTH_TEST);
+                gl.depthFunc(gl.LEQUAL);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                // --- 计算矩阵 ---
+                const fieldOfView = 45 * Math.PI / 180;
+                const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+                const projectionMatrix = createPerspectiveMatrix(fieldOfView, aspect, 0.1, 100.0);
+
+                // 计算相机位置
+                const camX = cameraDistance * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
+                const camY = cameraDistance * Math.sin(cameraAngleX);
+                const camZ = cameraDistance * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
+                const cameraPosition = [camX, camY, camZ];
+                const viewMatrix = createLookAtMatrix(cameraPosition, [0, 0, 0], [0, 1, 0]);
+
+                const modelMatrix = createIdentityMatrix();
+
+                // 计算法线矩阵
+                // const modelViewMatrix = multiplyMatrices(viewMatrix, modelMatrix);
+                // const normalMatrixMat4 = mat4Transpose(mat4Inverse(modelViewMatrix)); 
+                // const normalMatrix = new Float32Array([ // Extract 3x3
+                //     normalMatrixMat4[0], normalMatrixMat4[1], normalMatrixMat4[2],
+                //     normalMatrixMat4[4], normalMatrixMat4[5], normalMatrixMat4[6],
+                //     normalMatrixMat4[8], normalMatrixMat4[9], normalMatrixMat4[10]
+                // ]);
+                // 简化：如果modelMatrix只有旋转或没有变换，法线矩阵就是单位矩阵
+                const normalMatrix = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+
+                // --- 绑定着色器和缓冲区 ---
+                gl.useProgram(programInfo.program);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(programInfo.attribLocations.position, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+                gl.vertexAttribPointer(programInfo.attribLocations.normal, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(programInfo.attribLocations.normal);
+
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+                // --- 设置Uniforms ---
+                gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.viewMatrix, false, viewMatrix);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.modelMatrix, false, modelMatrix);
+                gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
+
+                // 设置材质
+                gl.uniform3fv(programInfo.uniformLocations.material.ambient, currentMaterial.ambient);
+                gl.uniform3fv(programInfo.uniformLocations.material.diffuse, currentMaterial.diffuse);
+                gl.uniform3fv(programInfo.uniformLocations.material.specular, currentMaterial.specular);
+                gl.uniform1f(programInfo.uniformLocations.material.shininess, currentMaterial.shininess);
+
+                // 设置光源
+                gl.uniform3fv(programInfo.uniformLocations.light.position, light.position);
+                gl.uniform3fv(programInfo.uniformLocations.light.color, light.color);
+                gl.uniform1f(programInfo.uniformLocations.light.ambientIntensity, light.ambientIntensity);
+
+                gl.uniform3fv(programInfo.uniformLocations.viewPos, cameraPosition);
+
+                // --- 绘制 ---
+                gl.drawElements(gl.TRIANGLES, buffers.count, gl.UNSIGNED_SHORT, 0);
+            }
+
+            // ---- 事件处理 ----
+            const materialSelect = document.getElementById('materialSelect');
+            materialSelect.addEventListener('change', (e) => {
+                currentMaterial = materials[e.target.value];
+                updateMaterialDisplay();
+                draw();
+            });
+
+            // 鼠标拖动旋转相机
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                cameraAngleY += deltaX * 0.01;
+                cameraAngleX += deltaY * 0.01;
+                cameraAngleX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraAngleX));
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                draw();
+            });
+
+            // 鼠标滚轮缩放
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                cameraDistance += e.deltaY * 0.01;
+                cameraDistance = Math.max(1.5, Math.min(10, cameraDistance));
+                draw();
+            });
+
+            // 初始化
+            updateMaterialDisplay();
+            draw();
+        }
+
+        // 确保materials.js加载后再执行main
+        if (typeof materials !== 'undefined') {
+            main();
+        } else {
+            // 如果materials.js是异步加载，需要等待
+            console.error("材质数据未加载！");
+        }
+    </script>
+</body>
+
+</html>
