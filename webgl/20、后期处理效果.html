@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL 后期处理效果</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            background-color: black;
+        }
+
+        .controls {
+            margin: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .control-group {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glCanvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <div class="control-group">
+            <label>
+                <input type="radio" name="effect" value="none" checked> 无效果
+            </label>
+            <label>
+                <input type="radio" name="effect" value="grayscale"> 灰度
+            </label>
+            <label>
+                <input type="radio" name="effect" value="invert"> 反相
+            </label>
+            <label>
+                <input type="radio" name="effect" value="blur"> 模糊
+            </label>
+            <label>
+                <input type="radio" name="effect" value="edge"> 边缘检测
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                效果强度:
+                <input type="range" id="effectStrength" min="0" max="1" value="0.5" step="0.01">
+                <span id="strengthValue">0.5</span>
+            </label>
+        </div>
+    </div>
+
+    <script src="gl-matrix.js"></script>
+    <script>
+        // 获取WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            return;
+        }
+
+        // 加载着色器并初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // 检查着色器程序是否链接成功
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            // 检查编译是否成功
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('编译着色器时发生错误: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 场景渲染的顶点着色器
+        const sceneVsSource = `
+            attribute vec4 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            
+            uniform mat4 uModelViewMatrix;
+            uniform mat4 uProjectionMatrix;
+            
+            varying highp vec2 vTextureCoord;
+            
+            void main() {
+                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                vTextureCoord = aTextureCoord;
+            }
+        `;
+
+        // 场景渲染的片元着色器
+        const sceneFsSource = `
+            precision highp float;
+            
+            varying highp vec2 vTextureCoord;
+            
+            uniform sampler2D uSampler;
+            
+            void main() {
+                gl_FragColor = texture2D(uSampler, vTextureCoord);
+            }
+        `;
+
+        // 后期处理的顶点着色器
+        const postVsSource = `
+            attribute vec4 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            
+            varying highp vec2 vTextureCoord;
+            
+            void main() {
+                gl_Position = aVertexPosition;
+                vTextureCoord = aTextureCoord;
+            }
+        `;
+
+        // 后期处理的片元着色器
+        const postFsSource = `
+            precision highp float;
+            
+            varying highp vec2 vTextureCoord;
+            
+            uniform sampler2D uSceneTexture;
+            uniform int uEffect;
+            uniform float uStrength;
+            uniform vec2 uTextureSize;
+            
+            // 无效果
+            vec4 effectNone(vec2 texCoord) {
+                return texture2D(uSceneTexture, texCoord);
+            }
+            
+            // 灰度效果
+            vec4 effectGrayscale(vec2 texCoord) {
+                vec4 color = texture2D(uSceneTexture, texCoord);
+                float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                return mix(color, vec4(vec3(gray), color.a), uStrength);
+            }
+            
+            // 反相效果
+            vec4 effectInvert(vec2 texCoord) {
+                vec4 color = texture2D(uSceneTexture, texCoord);
+                vec4 inverted = vec4(1.0 - color.rgb, color.a);
+                return mix(color, inverted, uStrength);
+            }
+            
+            // 模糊效果
+            vec4 effectBlur(vec2 texCoord) {
+                float blurSize = 0.01 * uStrength;
+                vec4 sum = vec4(0.0);
+                vec2 texelSize = 1.0 / uTextureSize;
+                
+                // 3x3 高斯模糊
+                sum += texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, -texelSize.y) * blurSize) * 0.0625;
+                sum += texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, 0.0) * blurSize) * 0.125;
+                sum += texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, texelSize.y) * blurSize) * 0.0625;
+                
+                sum += texture2D(uSceneTexture, texCoord + vec2(0.0, -texelSize.y) * blurSize) * 0.125;
+                sum += texture2D(uSceneTexture, texCoord) * 0.25;
+                sum += texture2D(uSceneTexture, texCoord + vec2(0.0, texelSize.y) * blurSize) * 0.125;
+                
+                sum += texture2D(uSceneTexture, texCoord + vec2(texelSize.x, -texelSize.y) * blurSize) * 0.0625;
+                sum += texture2D(uSceneTexture, texCoord + vec2(texelSize.x, 0.0) * blurSize) * 0.125;
+                sum += texture2D(uSceneTexture, texCoord + vec2(texelSize.x, texelSize.y) * blurSize) * 0.0625;
+                
+                vec4 originalColor = texture2D(uSceneTexture, texCoord);
+                return mix(originalColor, sum, uStrength);
+            }
+            
+            // 边缘检测效果
+            vec4 effectEdge(vec2 texCoord) {
+                vec2 texelSize = 1.0 / uTextureSize;
+                
+                // Sobel 算子
+                vec4 top = texture2D(uSceneTexture, texCoord + vec2(0.0, -texelSize.y));
+                vec4 right = texture2D(uSceneTexture, texCoord + vec2(texelSize.x, 0.0));
+                vec4 bottom = texture2D(uSceneTexture, texCoord + vec2(0.0, texelSize.y));
+                vec4 left = texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, 0.0));
+                
+                vec4 topLeft = texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, -texelSize.y));
+                vec4 topRight = texture2D(uSceneTexture, texCoord + vec2(texelSize.x, -texelSize.y));
+                vec4 bottomLeft = texture2D(uSceneTexture, texCoord + vec2(-texelSize.x, texelSize.y));
+                vec4 bottomRight = texture2D(uSceneTexture, texCoord + vec2(texelSize.x, texelSize.y));
+                
+                vec4 h = -topLeft - 2.0 * top - topRight + bottomLeft + 2.0 * bottom + bottomRight;
+                vec4 v = -topLeft - 2.0 * left - bottomLeft + topRight + 2.0 * right + bottomRight;
+                
+                vec4 edge = sqrt(h * h + v * v);
+                
+                vec4 originalColor = texture2D(uSceneTexture, texCoord);
+                return mix(originalColor, vec4(edge.rgb, 1.0), uStrength);
+            }
+            
+            void main() {
+                vec4 finalColor;
+                
+                if (uEffect == 0) {
+                    finalColor = effectNone(vTextureCoord);
+                } else if (uEffect == 1) {
+                    finalColor = effectGrayscale(vTextureCoord);
+                } else if (uEffect == 2) {
+                    finalColor = effectInvert(vTextureCoord);
+                } else if (uEffect == 3) {
+                    finalColor = effectBlur(vTextureCoord);
+                } else if (uEffect == 4) {
+                    finalColor = effectEdge(vTextureCoord);
+                } else {
+                    finalColor = effectNone(vTextureCoord);
+                }
+                
+                gl_FragColor = finalColor;
+            }
+        `;
+
+        // 初始化场景和后期处理着色器程序
+        const sceneShaderProgram = initShaderProgram(gl, sceneVsSource, sceneFsSource);
+        const postShaderProgram = initShaderProgram(gl, postVsSource, postFsSource);
+
+        // 获取着色器变量位置
+        const sceneProgramInfo = {
+            program: sceneShaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(sceneShaderProgram, 'aVertexPosition'),
+                textureCoord: gl.getAttribLocation(sceneShaderProgram, 'aTextureCoord'),
+            },
+            uniformLocations: {
+                projectionMatrix: gl.getUniformLocation(sceneShaderProgram, 'uProjectionMatrix'),
+                modelViewMatrix: gl.getUniformLocation(sceneShaderProgram, 'uModelViewMatrix'),
+                uSampler: gl.getUniformLocation(sceneShaderProgram, 'uSampler'),
+            },
+        };
+
+        const postProgramInfo = {
+            program: postShaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(postShaderProgram, 'aVertexPosition'),
+                textureCoord: gl.getAttribLocation(postShaderProgram, 'aTextureCoord'),
+            },
+            uniformLocations: {
+                sceneTexture: gl.getUniformLocation(postShaderProgram, 'uSceneTexture'),
+                effect: gl.getUniformLocation(postShaderProgram, 'uEffect'),
+                strength: gl.getUniformLocation(postShaderProgram, 'uStrength'),
+                textureSize: gl.getUniformLocation(postShaderProgram, 'uTextureSize'),
+            },
+        };
+
+        // 创建立方体几何体
+        function initCubeBuffers(gl) {
+            // 创建顶点位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // 立方体顶点坐标
+            const positions = [
+                // 前面
+                -1.0, -1.0, 1.0,
+                1.0, -1.0, 1.0,
+                1.0, 1.0, 1.0,
+                -1.0, 1.0, 1.0,
+
+                // 后面
+                -1.0, -1.0, -1.0,
+                -1.0, 1.0, -1.0,
+                1.0, 1.0, -1.0,
+                1.0, -1.0, -1.0,
+
+                // 上面
+                -1.0, 1.0, -1.0,
+                -1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0,
+                1.0, 1.0, -1.0,
+
+                // 下面
+                -1.0, -1.0, -1.0,
+                1.0, -1.0, -1.0,
+                1.0, -1.0, 1.0,
+                -1.0, -1.0, 1.0,
+
+                // 右面
+                1.0, -1.0, -1.0,
+                1.0, 1.0, -1.0,
+                1.0, 1.0, 1.0,
+                1.0, -1.0, 1.0,
+
+                // 左面
+                -1.0, -1.0, -1.0,
+                -1.0, -1.0, 1.0,
+                -1.0, 1.0, 1.0,
+                -1.0, 1.0, -1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建纹理坐标缓冲区
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+
+            const textureCoordinates = [
+                // 前面
+                0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+
+                // 后面
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+                0.0, 0.0,
+
+                // 上面
+                0.0, 1.0,
+                0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+
+                // 下面
+                1.0, 1.0,
+                0.0, 1.0,
+                0.0, 0.0,
+                1.0, 0.0,
+
+                // 右面
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+                0.0, 0.0,
+
+                // 左面
+                0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+            // 创建索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+            // 立方体面的顶点索引
+            const indices = [
+                0, 1, 2, 0, 2, 3,    // 前面
+                4, 5, 6, 4, 6, 7,    // 后面
+                8, 9, 10, 8, 10, 11,   // 上面
+                12, 13, 14, 12, 14, 15,   // 下面
+                16, 17, 18, 16, 18, 19,   // 右面
+                20, 21, 22, 20, 22, 23,   // 左面
+            ];
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                textureCoord: textureCoordBuffer,
+                indices: indexBuffer,
+                vertexCount: 36,
+            };
+        }
+
+        // 创建全屏四边形几何体
+        function initQuadBuffers(gl) {
+            // 创建顶点位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // 全屏四边形顶点坐标
+            const positions = [
+                -1.0, -1.0,
+                1.0, -1.0,
+                1.0, 1.0,
+                -1.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建纹理坐标缓冲区
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+
+            const textureCoordinates = [
+                0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+            // 创建索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+            // 四边形面的顶点索引
+            const indices = [
+                0, 1, 2,
+                0, 2, 3,
+            ];
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                textureCoord: textureCoordBuffer,
+                indices: indexBuffer,
+                vertexCount: 6,
+            };
+        }
+
+        // 加载纹理
+        function loadTexture(gl, url) {
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            // 使用临时1x1像素，等待图像加载
+            const level = 0;
+            const internalFormat = gl.RGBA;
+            const width = 1;
+            const height = 1;
+            const border = 0;
+            const srcFormat = gl.RGBA;
+            const srcType = gl.UNSIGNED_BYTE;
+            const pixel = new Uint8Array([255, 0, 0, 255]); // 红色
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType, pixel);
+
+            // 加载图像
+            const image = new Image();
+            image.onload = function () {
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                    srcFormat, srcType, image);
+
+                // 检查图像是否为2的幂
+                if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                } else {
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                }
+            };
+            image.src = url;
+
+            return texture;
+        }
+
+        // 检查数值是否为2的幂
+        function isPowerOf2(value) {
+            return (value & (value - 1)) === 0;
+        }
+
+        // 创建帧缓冲区
+        function createFramebuffer(gl, width, height) {
+            // 创建帧缓冲区
+            const framebuffer = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+            // 创建纹理附件
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            // 创建深度缓冲区
+            const depthBuffer = gl.createRenderbuffer();
+            gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
+            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+
+            // 将纹理附加到帧缓冲区
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
+
+            // 检查帧缓冲区是否完整
+            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+                console.error('帧缓冲区不完整');
+            }
+
+            // 解绑帧缓冲区和渲染缓冲区
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            return {
+                framebuffer: framebuffer,
+                texture: texture,
+                depthBuffer: depthBuffer,
+                width: width,
+                height: height,
+            };
+        }
+
+        // 初始化立方体和四边形缓冲区
+        const cubeBuffers = initCubeBuffers(gl);
+        const quadBuffers = initQuadBuffers(gl);
+
+        // 加载立方体纹理
+        const cubeTexture = loadTexture(gl, 'textures/crate.jpg');
+
+        // 创建帧缓冲区
+        const framebufferInfo = createFramebuffer(gl, canvas.width, canvas.height);
+
+        // 获取控制元素
+        const effectRadios = document.getElementsByName('effect');
+        const strengthSlider = document.getElementById('effectStrength');
+        const strengthValueSpan = document.getElementById('strengthValue');
+
+        // 添加事件监听器
+        strengthSlider.addEventListener('input', updateStrength);
+
+        // 更新效果强度
+        function updateStrength() {
+            strengthValueSpan.textContent = strengthSlider.value;
+        }
+
+        // 获取当前选择的效果
+        function getCurrentEffect() {
+            for (let i = 0; i < effectRadios.length; i++) {
+                if (effectRadios[i].checked) {
+                    switch (effectRadios[i].value) {
+                        case 'none': return 0;
+                        case 'grayscale': return 1;
+                        case 'invert': return 2;
+                        case 'blur': return 3;
+                        case 'edge': return 4;
+                        default: return 0;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        // 渲染场景
+        function render(time) {
+            time *= 0.001; // 转换为秒
+
+            // 第一步：渲染场景到帧缓冲区
+            gl.bindFramebuffer(gl.FRAMEBUFFER, framebufferInfo.framebuffer);
+            gl.viewport(0, 0, framebufferInfo.width, framebufferInfo.height);
+
+            // 清除颜色和深度缓冲区
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 创建透视矩阵
+            const fieldOfView = 45 * Math.PI / 180; // 45度视角，转换为弧度
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const projectionMatrix = mat4.create();
+            mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+            // 创建模型视图矩阵
+            const modelViewMatrix = mat4.create();
+            mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -6.0]);
+            mat4.rotate(modelViewMatrix, modelViewMatrix, time, [1, 1, 1]);
+
+            // 绑定立方体顶点缓冲区并设置属性指针
+            {
+                const numComponents = 3; // xyz坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.position);
+                gl.vertexAttribPointer(
+                    sceneProgramInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(sceneProgramInfo.attribLocations.vertexPosition);
+            }
+
+            // 绑定立方体纹理坐标缓冲区并设置属性指针
+            {
+                const numComponents = 2; // uv坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.textureCoord);
+                gl.vertexAttribPointer(
+                    sceneProgramInfo.attribLocations.textureCoord,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(sceneProgramInfo.attribLocations.textureCoord);
+            }
+
+            // 绑定立方体索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeBuffers.indices);
+
+            // 使用场景着色器程序
+            gl.useProgram(sceneProgramInfo.program);
+
+            // 设置场景着色器uniforms
+            gl.uniformMatrix4fv(
+                sceneProgramInfo.uniformLocations.projectionMatrix,
+                false,
+                projectionMatrix);
+            gl.uniformMatrix4fv(
+                sceneProgramInfo.uniformLocations.modelViewMatrix,
+                false,
+                modelViewMatrix);
+
+            // 绑定立方体纹理
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+            gl.uniform1i(sceneProgramInfo.uniformLocations.uSampler, 0);
+
+            // 绘制立方体
+            {
+                const vertexCount = cubeBuffers.vertexCount;
+                const type = gl.UNSIGNED_SHORT;
+                const offset = 0;
+                gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            }
+
+            // 第二步：应用后期处理效果并渲染到屏幕
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 绑定四边形顶点缓冲区并设置属性指针
+            {
+                const numComponents = 2; // xy坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers.position);
+                gl.vertexAttribPointer(
+                    postProgramInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(postProgramInfo.attribLocations.vertexPosition);
+            }
+
+            // 绑定四边形纹理坐标缓冲区并设置属性指针
+            {
+                const numComponents = 2; // uv坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers.textureCoord);
+                gl.vertexAttribPointer(
+                    postProgramInfo.attribLocations.textureCoord,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(postProgramInfo.attribLocations.textureCoord);
+            }
+
+            // 绑定四边形索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadBuffers.indices);
+
+            // 使用后期处理着色器程序
+            gl.useProgram(postProgramInfo.program);
+
+            // 设置后期处理着色器uniforms
+            gl.uniform1i(postProgramInfo.uniformLocations.effect, getCurrentEffect());
+            gl.uniform1f(postProgramInfo.uniformLocations.strength, parseFloat(strengthSlider.value));
+            gl.uniform2f(postProgramInfo.uniformLocations.textureSize, framebufferInfo.width, framebufferInfo.height);
+
+            // 绑定渲染到帧缓冲区的场景纹理
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, framebufferInfo.texture);
+            gl.uniform1i(postProgramInfo.uniformLocations.sceneTexture, 0);
+
+            // 绘制四边形
+            {
+                const vertexCount = quadBuffers.vertexCount;
+                const type = gl.UNSIGNED_SHORT;
+                const offset = 0;
+                gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            }
+
+            // 请求下一帧
+            requestAnimationFrame(render);
+        }
+
+        // 启动渲染循环
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

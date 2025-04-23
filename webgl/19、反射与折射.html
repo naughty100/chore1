@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL 反射与折射</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            background-color: black;
+        }
+
+        .controls {
+            margin: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glCanvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <label>
+            反射/折射比例:
+            <input type="range" id="reflectRefractRatio" min="0" max="1" value="0.5" step="0.01">
+            <span id="ratioValue">0.5</span>
+        </label><br>
+        <label>
+            折射率:
+            <input type="range" id="refractiveIndex" min="1" max="3" value="1.5" step="0.01">
+            <span id="refrIndexValue">1.5</span>
+        </label><br>
+        <label>
+            <input type="checkbox" id="showReflection" checked> 显示反射
+        </label>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="showRefraction" checked> 显示折射
+        </label>
+    </div>
+
+    <script src="gl-matrix.js"></script>
+    <script>
+        // 获取WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            return;
+        }
+
+        // 顶点着色器源码
+        const vsSource = `
+            attribute vec4 aVertexPosition;
+            attribute vec3 aVertexNormal;
+            attribute vec2 aTextureCoord;
+            
+            uniform mat4 uModelViewMatrix;
+            uniform mat4 uProjectionMatrix;
+            uniform mat4 uNormalMatrix;
+            uniform vec3 uCameraPosition;
+            
+            varying highp vec2 vTextureCoord;
+            varying highp vec3 vNormal;
+            varying highp vec3 vPosition;
+            varying highp vec3 vToCamera;
+            
+            void main() {
+                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                vTextureCoord = aTextureCoord;
+                
+                // 将顶点法线转换到世界空间
+                vNormal = normalize(vec3(uNormalMatrix * vec4(aVertexNormal, 0.0)));
+                
+                // 计算片段在世界空间中的位置
+                vPosition = vec3(uModelViewMatrix * aVertexPosition);
+                
+                // 计算从片段到相机的向量
+                vToCamera = normalize(uCameraPosition - vPosition);
+            }
+        `;
+
+        // 片元着色器源码
+        const fsSource = `
+            precision highp float;
+            
+            varying highp vec2 vTextureCoord;
+            varying highp vec3 vNormal;
+            varying highp vec3 vPosition;
+            varying highp vec3 vToCamera;
+            
+            uniform sampler2D uSkyboxTexture;
+            uniform sampler2D uWaterTexture;
+            uniform float uReflectRefractRatio;
+            uniform float uRefractiveIndex;
+            uniform bool uShowReflection;
+            uniform bool uShowRefraction;
+            
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 toCamera = normalize(vToCamera);
+                
+                vec4 finalColor = vec4(0.0);
+                
+                // 反射方向
+                vec3 reflectDir = reflect(-toCamera, normal);
+                
+                // 折射方向
+                vec3 refractDir = refract(-toCamera, normal, 1.0/uRefractiveIndex);
+                
+                // 采样坐标 (简化的环境纹理采样)
+                vec2 reflectCoord = reflectDir.xy * 0.5 + 0.5;
+                vec2 refractCoord = refractDir.xy * 0.5 + 0.5;
+                
+                // 基础水面纹理
+                vec4 waterColor = texture2D(uWaterTexture, vTextureCoord);
+                
+                // 根据反射与折射比例混合
+                if (uShowReflection && uShowRefraction) {
+                    vec4 reflectColor = texture2D(uSkyboxTexture, reflectCoord);
+                    vec4 refractColor = texture2D(uSkyboxTexture, refractCoord);
+                    
+                    finalColor = mix(refractColor, reflectColor, uReflectRefractRatio) * waterColor;
+                } else if (uShowReflection) {
+                    vec4 reflectColor = texture2D(uSkyboxTexture, reflectCoord);
+                    finalColor = reflectColor * waterColor;
+                } else if (uShowRefraction) {
+                    vec4 refractColor = texture2D(uSkyboxTexture, refractCoord);
+                    finalColor = refractColor * waterColor;
+                } else {
+                    finalColor = waterColor;
+                }
+                
+                gl_FragColor = finalColor;
+            }
+        `;
+
+        // 加载着色器并初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // 检查着色器程序是否链接成功
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            // 检查编译是否成功
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('编译着色器时发生错误: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 初始化着色器程序
+        const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+        // 获取着色器变量位置
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+                textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+            },
+            uniformLocations: {
+                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+                cameraPosition: gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
+                skyboxTexture: gl.getUniformLocation(shaderProgram, 'uSkyboxTexture'),
+                waterTexture: gl.getUniformLocation(shaderProgram, 'uWaterTexture'),
+                reflectRefractRatio: gl.getUniformLocation(shaderProgram, 'uReflectRefractRatio'),
+                refractiveIndex: gl.getUniformLocation(shaderProgram, 'uRefractiveIndex'),
+                showReflection: gl.getUniformLocation(shaderProgram, 'uShowReflection'),
+                showRefraction: gl.getUniformLocation(shaderProgram, 'uShowRefraction'),
+            },
+        };
+
+        // 创建水面网格
+        function initBuffers(gl) {
+            // 创建水面平面
+            const size = 20;
+            const segments = 50;
+            const segmentSize = size / segments;
+
+            const positions = [];
+            const normals = [];
+            const textureCoordinates = [];
+            const indices = [];
+
+            // 生成顶点位置、法线和纹理坐标
+            for (let z = 0; z <= segments; z++) {
+                for (let x = 0; x <= segments; x++) {
+                    const xPos = x * segmentSize - size / 2;
+                    const zPos = z * segmentSize - size / 2;
+
+                    positions.push(xPos, 0, zPos);
+                    normals.push(0, 1, 0); // 水面法线向上
+                    textureCoordinates.push(x / segments, z / segments);
+                }
+            }
+
+            // 生成索引
+            for (let z = 0; z < segments; z++) {
+                for (let x = 0; x < segments; x++) {
+                    const first = z * (segments + 1) + x;
+                    const second = first + 1;
+                    const third = first + (segments + 1);
+                    const fourth = third + 1;
+
+                    indices.push(first, second, third);
+                    indices.push(second, fourth, third);
+                }
+            }
+
+            // 创建和绑定顶点位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建和绑定法线缓冲区
+            const normalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+
+            // 创建和绑定纹理坐标缓冲区
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+            // 创建和绑定索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                normal: normalBuffer,
+                textureCoord: textureCoordBuffer,
+                indices: indexBuffer,
+                count: indices.length,
+            };
+        }
+
+        // 加载纹理
+        function loadTexture(gl, url) {
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            // 使用临时1x1像素，等待图像加载
+            const level = 0;
+            const internalFormat = gl.RGBA;
+            const width = 1;
+            const height = 1;
+            const border = 0;
+            const srcFormat = gl.RGBA;
+            const srcType = gl.UNSIGNED_BYTE;
+            const pixel = new Uint8Array([0, 0, 255, 255]); // 蓝色
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType, pixel);
+
+            // 加载图像
+            const image = new Image();
+            image.onload = function () {
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                    srcFormat, srcType, image);
+
+                // 检查图像是否为2的幂
+                if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                } else {
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                }
+            };
+            image.src = url;
+
+            return texture;
+        }
+
+        // 检查数值是否为2的幂
+        function isPowerOf2(value) {
+            return (value & (value - 1)) === 0;
+        }
+
+        // 创建水面和环境纹理
+        const skyboxTexture = loadTexture(gl, 'textures/skybox.jpg');
+        const waterTexture = loadTexture(gl, 'textures/water.jpg');
+
+        // 初始化水面网格缓冲区
+        const buffers = initBuffers(gl);
+
+        // 获取控制元素
+        const reflectRefractRatioSlider = document.getElementById('reflectRefractRatio');
+        const refractiveIndexSlider = document.getElementById('refractiveIndex');
+        const ratioValueSpan = document.getElementById('ratioValue');
+        const refrIndexValueSpan = document.getElementById('refrIndexValue');
+        const showReflectionCheckbox = document.getElementById('showReflection');
+        const showRefractionCheckbox = document.getElementById('showRefraction');
+
+        // 添加事件监听器
+        reflectRefractRatioSlider.addEventListener('input', updateValues);
+        refractiveIndexSlider.addEventListener('input', updateValues);
+        showReflectionCheckbox.addEventListener('change', updateValues);
+        showRefractionCheckbox.addEventListener('change', updateValues);
+
+        // 更新控制值
+        function updateValues() {
+            ratioValueSpan.textContent = reflectRefractRatioSlider.value;
+            refrIndexValueSpan.textContent = refractiveIndexSlider.value;
+        }
+
+        // 渲染场景
+        function render(time) {
+            time *= 0.001; // 转换为秒
+
+            // 清除画布
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 创建透视矩阵
+            const fieldOfView = 45 * Math.PI / 180; // 45度视角，转换为弧度
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const projectionMatrix = mat4.create();
+            mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+            // 设置相机位置
+            const cameraPosition = [
+                Math.sin(time * 0.5) * 15,
+                5,
+                Math.cos(time * 0.5) * 15
+            ];
+
+            // 创建模型视图矩阵
+            const modelViewMatrix = mat4.create();
+            mat4.lookAt(
+                modelViewMatrix,
+                cameraPosition,       // 相机位置
+                [0.0, 0.0, 0.0],      // 观察目标
+                [0.0, 1.0, 0.0]       // 上方向
+            );
+
+            // 创建法线矩阵
+            const normalMatrix = mat4.create();
+            mat4.invert(normalMatrix, modelViewMatrix);
+            mat4.transpose(normalMatrix, normalMatrix);
+
+            // 绑定顶点缓冲区并设置属性指针
+            {
+                const numComponents = 3; // xyz坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+            }
+
+            // 绑定法线缓冲区并设置属性指针
+            {
+                const numComponents = 3;
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexNormal,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
+            }
+
+            // 绑定纹理坐标缓冲区并设置属性指针
+            {
+                const numComponents = 2; // uv坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.textureCoord,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+            }
+
+            // 绑定索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+            // 使用着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 设置着色器uniforms
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.projectionMatrix,
+                false,
+                projectionMatrix);
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.modelViewMatrix,
+                false,
+                modelViewMatrix);
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.normalMatrix,
+                false,
+                normalMatrix);
+            gl.uniform3fv(
+                programInfo.uniformLocations.cameraPosition,
+                cameraPosition);
+
+            // 设置控制参数
+            gl.uniform1f(
+                programInfo.uniformLocations.reflectRefractRatio,
+                parseFloat(reflectRefractRatioSlider.value));
+            gl.uniform1f(
+                programInfo.uniformLocations.refractiveIndex,
+                parseFloat(refractiveIndexSlider.value));
+            gl.uniform1i(
+                programInfo.uniformLocations.showReflection,
+                showReflectionCheckbox.checked);
+            gl.uniform1i(
+                programInfo.uniformLocations.showRefraction,
+                showRefractionCheckbox.checked);
+
+            // 激活和绑定纹理
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, skyboxTexture);
+            gl.uniform1i(programInfo.uniformLocations.skyboxTexture, 0);
+
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, waterTexture);
+            gl.uniform1i(programInfo.uniformLocations.waterTexture, 1);
+
+            // 绘制水面
+            {
+                const vertexCount = buffers.count;
+                const type = gl.UNSIGNED_SHORT;
+                const offset = 0;
+                gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            }
+
+            // 请求下一帧
+            requestAnimationFrame(render);
+        }
+
+        // 启动渲染循环
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

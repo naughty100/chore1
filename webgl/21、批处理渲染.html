@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL 批处理渲染</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            background-color: black;
+        }
+
+        .controls {
+            margin: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glCanvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <label>
+            物体数量:
+            <input type="range" id="objectCount" min="1" max="10000" value="1000" step="100">
+            <span id="countValue">1000</span>
+        </label><br>
+        <label>
+            <input type="checkbox" id="enableBatching" checked> 启用批处理
+        </label>
+    </div>
+    <div class="stats" id="stats"></div>
+
+    <script src="gl-matrix.js"></script>
+    <script>
+        // 获取WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            return;
+        }
+
+        // 顶点着色器源码
+        const vsSource = `
+            attribute vec4 aVertexPosition;
+            attribute vec4 aVertexColor;
+            attribute vec2 aTextureCoord;
+            attribute vec3 aInstancePosition;
+            attribute vec3 aInstanceRotation;
+            attribute float aInstanceScale;
+            
+            uniform mat4 uProjectionMatrix;
+            uniform mat4 uViewMatrix;
+            
+            varying lowp vec4 vColor;
+            varying highp vec2 vTextureCoord;
+            
+            // 构造旋转矩阵
+            mat3 rotationMatrix(vec3 angles) {
+                float c1 = cos(angles.x);
+                float s1 = sin(angles.x);
+                float c2 = cos(angles.y);
+                float s2 = sin(angles.y);
+                float c3 = cos(angles.z);
+                float s3 = sin(angles.z);
+                
+                return mat3(
+                    c2 * c3, -c2 * s3, s2,
+                    c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, -c2 * s1,
+                    s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, c1 * c2
+                );
+            }
+            
+            void main() {
+                // 应用实例旋转
+                mat3 rotation = rotationMatrix(aInstanceRotation);
+                vec3 scaledPosition = aVertexPosition.xyz * aInstanceScale;
+                vec3 rotatedPosition = rotation * scaledPosition;
+                
+                // 应用实例位置
+                vec3 position = rotatedPosition + aInstancePosition;
+                
+                // 计算最终位置
+                gl_Position = uProjectionMatrix * uViewMatrix * vec4(position, 1.0);
+                
+                // 传递颜色和纹理坐标
+                vColor = aVertexColor;
+                vTextureCoord = aTextureCoord;
+            }
+        `;
+
+        // 片元着色器源码
+        const fsSource = `
+            precision mediump float;
+            
+            varying lowp vec4 vColor;
+            varying highp vec2 vTextureCoord;
+            
+            uniform sampler2D uSampler;
+            uniform bool uUseTexture;
+            
+            void main() {
+                if (uUseTexture) {
+                    gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;
+                } else {
+                    gl_FragColor = vColor;
+                }
+            }
+        `;
+
+        // 加载着色器并初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // 检查着色器程序是否链接成功
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            // 检查编译是否成功
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('编译着色器时发生错误: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 初始化着色器程序
+        const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+        // 获取着色器变量位置
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+                textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+                instancePosition: gl.getAttribLocation(shaderProgram, 'aInstancePosition'),
+                instanceRotation: gl.getAttribLocation(shaderProgram, 'aInstanceRotation'),
+                instanceScale: gl.getAttribLocation(shaderProgram, 'aInstanceScale'),
+            },
+            uniformLocations: {
+                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                viewMatrix: gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
+                sampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+                useTexture: gl.getUniformLocation(shaderProgram, 'uUseTexture'),
+            },
+        };
+
+        // 创建四边形几何体
+        function initQuadBuffers(gl) {
+            // 创建顶点位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // 四边形顶点坐标
+            const positions = [
+                // 前面
+                -0.5, -0.5, 0.0,
+                0.5, -0.5, 0.0,
+                0.5, 0.5, 0.0,
+                -0.5, 0.5, 0.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建顶点颜色缓冲区
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+
+            // 四边形顶点颜色
+            const colors = [
+                1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            // 创建纹理坐标缓冲区
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+
+            // 四边形纹理坐标
+            const textureCoordinates = [
+                0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+            // 创建索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+            // 四边形索引
+            const indices = [
+                0, 1, 2,
+                0, 2, 3,
+            ];
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                color: colorBuffer,
+                textureCoord: textureCoordBuffer,
+                indices: indexBuffer,
+                vertexCount: 6,
+            };
+        }
+
+        // 加载纹理
+        function loadTexture(gl, url) {
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            // 使用临时1x1像素，等待图像加载
+            const level = 0;
+            const internalFormat = gl.RGBA;
+            const width = 1;
+            const height = 1;
+            const border = 0;
+            const srcFormat = gl.RGBA;
+            const srcType = gl.UNSIGNED_BYTE;
+            const pixel = new Uint8Array([255, 255, 255, 255]); // 白色
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType, pixel);
+
+            // 加载图像
+            const image = new Image();
+            image.onload = function () {
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                    srcFormat, srcType, image);
+
+                // 检查图像是否为2的幂
+                if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                } else {
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                }
+            };
+            image.src = url;
+
+            return texture;
+        }
+
+        // 检查数值是否为2的幂
+        function isPowerOf2(value) {
+            return (value & (value - 1)) === 0;
+        }
+
+        // 创建实例化数据
+        function createInstanceData(count) {
+            const positions = new Float32Array(count * 3);
+            const rotations = new Float32Array(count * 3);
+            const scales = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+                // 设置随机位置
+                positions[i * 3 + 0] = (Math.random() - 0.5) * 30; // x
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 30; // y
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 30; // z
+
+                // 设置随机旋转
+                rotations[i * 3 + 0] = Math.random() * Math.PI * 2; // 绕x轴旋转
+                rotations[i * 3 + 1] = Math.random() * Math.PI * 2; // 绕y轴旋转
+                rotations[i * 3 + 2] = Math.random() * Math.PI * 2; // 绕z轴旋转
+
+                // 设置随机缩放
+                scales[i] = Math.random() * 0.5 + 0.5;
+            }
+
+            return {
+                positions: positions,
+                rotations: rotations,
+                scales: scales,
+            };
+        }
+
+        // 创建实例化缓冲区
+        function initInstanceBuffers(gl, instanceData) {
+            // 创建实例位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, instanceData.positions, gl.STATIC_DRAW);
+
+            // 创建实例旋转缓冲区
+            const rotationBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, rotationBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, instanceData.rotations, gl.STATIC_DRAW);
+
+            // 创建实例缩放缓冲区
+            const scaleBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, scaleBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, instanceData.scales, gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                rotation: rotationBuffer,
+                scale: scaleBuffer,
+                count: instanceData.positions.length / 3,
+            };
+        }
+
+        // 加载纹理
+        const texture = loadTexture(gl, 'textures/particle.png');
+
+        // 初始化四边形缓冲区
+        const quadBuffers = initQuadBuffers(gl);
+
+        // 获取控制元素
+        const objectCountSlider = document.getElementById('objectCount');
+        const countValueSpan = document.getElementById('countValue');
+        const enableBatchingCheckbox = document.getElementById('enableBatching');
+        const statsDiv = document.getElementById('stats');
+
+        // 添加事件监听器
+        objectCountSlider.addEventListener('input', updateObjectCount);
+        enableBatchingCheckbox.addEventListener('change', updateBatching);
+
+        // 更新物体数量
+        function updateObjectCount() {
+            countValueSpan.textContent = objectCountSlider.value;
+
+            // 创建新的实例数据
+            const instanceData = createInstanceData(parseInt(objectCountSlider.value));
+
+            // 更新实例缓冲区
+            instanceBuffers = initInstanceBuffers(gl, instanceData);
+        }
+
+        // 更新批处理状态
+        function updateBatching() {
+            // 更新界面
+            console.log('批处理状态:', enableBatchingCheckbox.checked ? '启用' : '禁用');
+        }
+
+        // 性能统计数据
+        let frameCount = 0;
+        let lastTime = 0;
+        let fps = 0;
+        let drawCalls = 0;
+
+        // 更新性能统计
+        function updateStats() {
+            const now = performance.now();
+            frameCount++;
+
+            // 每秒更新一次FPS
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            // 更新统计显示
+            statsDiv.textContent = `FPS: ${fps}\n绘制调用: ${drawCalls}`;
+        }
+
+        // 创建实例数据和缓冲区
+        let instanceData = createInstanceData(parseInt(objectCountSlider.value));
+        let instanceBuffers = initInstanceBuffers(gl, instanceData);
+
+        // 渲染场景
+        function render(time) {
+            time *= 0.001; // 转换为秒
+
+            // 重置绘制调用计数
+            drawCalls = 0;
+
+            // 清除画布
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 创建透视矩阵
+            const fieldOfView = 45 * Math.PI / 180; // 45度视角，转换为弧度
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const projectionMatrix = mat4.create();
+            mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+            // 创建视图矩阵
+            const viewMatrix = mat4.create();
+            const cameraPosition = [0.0, 0.0, 40.0];
+            mat4.lookAt(
+                viewMatrix,
+                cameraPosition,       // 相机位置
+                [0.0, 0.0, 0.0],      // 观察目标
+                [0.0, 1.0, 0.0]       // 上方向
+            );
+
+            // 使用着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 设置着色器uniforms
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.projectionMatrix,
+                false,
+                projectionMatrix);
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.viewMatrix,
+                false,
+                viewMatrix);
+
+            // 设置纹理
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.uniform1i(programInfo.uniformLocations.sampler, 0);
+            gl.uniform1i(programInfo.uniformLocations.useTexture, 1);
+
+            // 绑定四边形顶点缓冲区并设置属性指针
+            {
+                const numComponents = 3; // xyz坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+            }
+
+            // 绑定四边形颜色缓冲区并设置属性指针
+            {
+                const numComponents = 4; // rgba颜色
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers.color);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexColor,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+            }
+
+            // 绑定四边形纹理坐标缓冲区并设置属性指针
+            {
+                const numComponents = 2; // uv坐标
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers.textureCoord);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.textureCoord,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+            }
+
+            // 绑定四边形索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadBuffers.indices);
+
+            if (enableBatchingCheckbox.checked) {
+                // 使用实例化渲染批处理
+
+                // 绑定实例位置缓冲区并设置属性指针
+                {
+                    const numComponents = 3; // xyz坐标
+                    const type = gl.FLOAT;
+                    const normalize = false;
+                    const stride = 0;
+                    const offset = 0;
+                    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers.position);
+                    gl.vertexAttribPointer(
+                        programInfo.attribLocations.instancePosition,
+                        numComponents,
+                        type,
+                        normalize,
+                        stride,
+                        offset);
+                    gl.enableVertexAttribArray(programInfo.attribLocations.instancePosition);
+                    gl.vertexAttribDivisor(programInfo.attribLocations.instancePosition, 1);
+                }
+
+                // 绑定实例旋转缓冲区并设置属性指针
+                {
+                    const numComponents = 3; // xyz旋转
+                    const type = gl.FLOAT;
+                    const normalize = false;
+                    const stride = 0;
+                    const offset = 0;
+                    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers.rotation);
+                    gl.vertexAttribPointer(
+                        programInfo.attribLocations.instanceRotation,
+                        numComponents,
+                        type,
+                        normalize,
+                        stride,
+                        offset);
+                    gl.enableVertexAttribArray(programInfo.attribLocations.instanceRotation);
+                    gl.vertexAttribDivisor(programInfo.attribLocations.instanceRotation, 1);
+                }
+
+                // 绑定实例缩放缓冲区并设置属性指针
+                {
+                    const numComponents = 1; // 缩放因子
+                    const type = gl.FLOAT;
+                    const normalize = false;
+                    const stride = 0;
+                    const offset = 0;
+                    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers.scale);
+                    gl.vertexAttribPointer(
+                        programInfo.attribLocations.instanceScale,
+                        numComponents,
+                        type,
+                        normalize,
+                        stride,
+                        offset);
+                    gl.enableVertexAttribArray(programInfo.attribLocations.instanceScale);
+                    gl.vertexAttribDivisor(programInfo.attribLocations.instanceScale, 1);
+                }
+
+                // 使用实例化绘制所有四边形
+                const ext = gl.getExtension('ANGLE_instanced_arrays');
+                if (ext) {
+                    ext.drawElementsInstancedANGLE(
+                        gl.TRIANGLES,
+                        quadBuffers.vertexCount,
+                        gl.UNSIGNED_SHORT,
+                        0,
+                        instanceBuffers.count
+                    );
+                    drawCalls = 1;
+                } else {
+                    alert('您的浏览器不支持ANGLE_instanced_arrays扩展，无法使用批处理渲染。');
+                    enableBatchingCheckbox.checked = false;
+                }
+            } else {
+                // 使用单独的绘制调用渲染每个实例
+                const positions = instanceBuffers.positions;
+                const rotations = instanceBuffers.rotations;
+                const scales = instanceBuffers.scales;
+
+                // 为每个实例创建模型矩阵
+                for (let i = 0; i < Math.min(instanceBuffers.count, 1000); i++) {
+                    // 直接传递位置、旋转和缩放值
+                    gl.vertexAttrib3f(
+                        programInfo.attribLocations.instancePosition,
+                        instanceData.positions[i * 3],
+                        instanceData.positions[i * 3 + 1],
+                        instanceData.positions[i * 3 + 2]
+                    );
+
+                    gl.vertexAttrib3f(
+                        programInfo.attribLocations.instanceRotation,
+                        instanceData.rotations[i * 3],
+                        instanceData.rotations[i * 3 + 1],
+                        instanceData.rotations[i * 3 + 2]
+                    );
+
+                    gl.vertexAttrib1f(
+                        programInfo.attribLocations.instanceScale,
+                        instanceData.scales[i]
+                    );
+
+                    // 绘制四边形
+                    gl.drawElements(
+                        gl.TRIANGLES,
+                        quadBuffers.vertexCount,
+                        gl.UNSIGNED_SHORT,
+                        0
+                    );
+
+                    drawCalls++;
+                }
+            }
+
+            // 重置实例属性分割器
+            if (enableBatchingCheckbox.checked) {
+                gl.vertexAttribDivisor(programInfo.attribLocations.instancePosition, 0);
+                gl.vertexAttribDivisor(programInfo.attribLocations.instanceRotation, 0);
+                gl.vertexAttribDivisor(programInfo.attribLocations.instanceScale, 0);
+            }
+
+            // 更新性能统计
+            updateStats();
+
+            // 请求下一帧
+            requestAnimationFrame(render);
+        }
+
+        // 启动渲染循环
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
