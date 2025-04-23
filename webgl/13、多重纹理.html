@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL多重纹理</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .control-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        label {
+            width: 150px;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .texture-section {
+            margin-bottom: 20px;
+        }
+
+        .texture-section h2 {
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .texture-preview {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .texture-preview img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>WebGL多重纹理</h1>
+
+        <div class="controls">
+            <div class="texture-section">
+                <h2>基础纹理和混合纹理</h2>
+                <div class="texture-preview">
+                    <div>
+                        <p>基础纹理：</p>
+                        <img src="textures/grass.jpg" alt="草地纹理">
+                    </div>
+                    <div>
+                        <p>混合纹理：</p>
+                        <img src="textures/path.jpg" alt="路径纹理">
+                    </div>
+                    <div>
+                        <p>混合遮罩：</p>
+                        <img src="textures/path_mask.jpg" alt="路径遮罩">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>混合比例:</label>
+                <input type="range" id="blendFactor" min="0" max="1" step="0.01" value="0.5">
+                <span id="blendFactorValue">0.50</span>
+            </div>
+            <div class="control-group">
+                <label>旋转:</label>
+                <input type="range" id="rotation" min="0" max="360" step="1" value="0">
+                <span id="rotationValue">0°</span>
+            </div>
+            <div class="control-group">
+                <label>缩放:</label>
+                <input type="range" id="scale" min="0.5" max="2" step="0.01" value="1">
+                <span id="scaleValue">1.00</span>
+            </div>
+        </div>
+
+        <canvas id="glCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec2 a_texCoord;
+        
+        uniform mat4 u_transformMatrix;
+        
+        varying vec2 v_texCoord;
+        
+        void main() {
+            gl_Position = u_transformMatrix * a_position;
+            v_texCoord = a_texCoord;
+        }
+    </script>
+
+    <!-- 片段着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        varying vec2 v_texCoord;
+        
+        // 三个纹理采样器
+        uniform sampler2D u_baseTexture;    // 第一个纹理（基础纹理，如草地）
+        uniform sampler2D u_blendTexture;   // 第二个纹理（需要混合的纹理，如道路）
+        uniform sampler2D u_maskTexture;    // 第三个纹理（混合遮罩，控制混合区域）
+        
+        uniform float u_blendFactor;        // 混合因子（0-1）控制混合程度
+        
+        void main() {
+            // 从三个纹理中采样
+            vec4 baseColor = texture2D(u_baseTexture, v_texCoord);
+            vec4 blendColor = texture2D(u_blendTexture, v_texCoord);
+            vec4 maskColor = texture2D(u_maskTexture, v_texCoord);
+            
+            // 使用遮罩的亮度（灰度）值和混合因子计算混合权重
+            float maskValue = (maskColor.r + maskColor.g + maskColor.b) / 3.0;
+            float blendWeight = maskValue * u_blendFactor;
+            
+            // 混合两个纹理颜色
+            gl_FragColor = mix(baseColor, blendColor, blendWeight);
+        }
+    </script>
+
+    <script src="lib/matrix.js"></script>
+    <script>
+        // 获取canvas元素和WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            throw new Error('WebGL不可用');
+        }
+
+        // 初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            // 创建着色器对象
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // 检查着色器程序是否链接成功
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('着色器程序链接失败: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            // 检查着色器是否编译成功
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('着色器编译失败: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 初始化几何数据（平面）
+        function initBuffers(gl) {
+            // 创建一个平面（由两个三角形组成）
+            const positions = [
+                -1.0, -1.0, 0.0,  // 左下
+                1.0, -1.0, 0.0,  // 右下
+                1.0, 1.0, 0.0,  // 右上
+                -1.0, 1.0, 0.0   // 左上
+            ];
+
+            // 纹理坐标
+            const textureCoords = [
+                0.0, 1.0,  // 左下
+                1.0, 1.0,  // 右下
+                1.0, 0.0,  // 右上
+                0.0, 0.0   // 左上
+            ];
+
+            // 索引数据：平面由两个三角形组成
+            const indices = [
+                0, 1, 2,
+                0, 2, 3
+            ];
+
+            // 创建并绑定位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建并绑定纹理坐标缓冲区
+            const texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+
+            // 创建并绑定索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                textureCoord: texCoordBuffer,
+                indices: indexBuffer,
+                count: indices.length
+            };
+        }
+
+        // 加载纹理
+        function loadTexture(gl, url) {
+            return new Promise((resolve) => {
+                const texture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+
+                // 初始纹理为1x1蓝色像素，等待图片加载
+                const level = 0;
+                const internalFormat = gl.RGBA;
+                const width = 1;
+                const height = 1;
+                const border = 0;
+                const srcFormat = gl.RGBA;
+                const srcType = gl.UNSIGNED_BYTE;
+                const pixel = new Uint8Array([0, 0, 255, 255]);  // 蓝色
+                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                    width, height, border, srcFormat, srcType,
+                    pixel);
+
+                // 加载图片
+                const image = new Image();
+                image.onload = function () {
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                        srcFormat, srcType, image);
+
+                    // 检查图片尺寸是否为2的幂
+                    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+                        // 为2的幂的图片，生成完整的mipmap
+                        gl.generateMipmap(gl.TEXTURE_2D);
+                    } else {
+                        // 非2的幂的图片，设置包裹和过滤模式
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    }
+
+                    resolve(texture);
+                };
+                image.src = url;
+            });
+        }
+
+        // 判断一个数是否为2的幂
+        function isPowerOf2(value) {
+            return (value & (value - 1)) === 0;
+        }
+
+        // 绘制场景
+        function drawScene() {
+            gl.clearColor(0.1, 0.1, 0.1, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // 创建变换矩阵
+            const modelViewMatrix = createIdentityMatrix();
+
+            // 应用Y轴旋转（使用我们的矩阵库）
+            const rotationYMatrix = new Float32Array([
+                Math.cos(currentRotation / 180 * Math.PI), 0, Math.sin(currentRotation / 180 * Math.PI), 0,
+                0, 1, 0, 0,
+                -Math.sin(currentRotation / 180 * Math.PI), 0, Math.cos(currentRotation / 180 * Math.PI), 0,
+                0, 0, 0, 1
+            ]);
+
+            // 创建缩放矩阵
+            const scaleMatrix = createScaleMatrix(currentScale, currentScale, 1);
+
+            // 组合变换矩阵
+            let transformMatrix = multiplyMatrices(rotationYMatrix, scaleMatrix);
+
+            // 绑定着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 设置着色器变量
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.transformMatrix,
+                false,
+                transformMatrix);
+
+            // 设置混合因子
+            gl.uniform1f(programInfo.uniformLocations.blendFactor, currentBlendFactor);
+
+            // 绑定第一个纹理（基础纹理）
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, textures.base);
+            gl.uniform1i(programInfo.uniformLocations.baseTexture, 0);
+
+            // 绑定第二个纹理（混合纹理）
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, textures.blend);
+            gl.uniform1i(programInfo.uniformLocations.blendTexture, 1);
+
+            // 绑定第三个纹理（混合遮罩）
+            gl.activeTexture(gl.TEXTURE2);
+            gl.bindTexture(gl.TEXTURE_2D, textures.mask);
+            gl.uniform1i(programInfo.uniformLocations.maskTexture, 2);
+
+            // 设置位置属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.position,
+                3,        // 每个顶点3个坐标分量 (xyz)
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+            // 设置纹理坐标属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.textureCoord,
+                2,        // 每个顶点2个纹理坐标分量 (st)
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+
+            // 绑定索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+            // 绘制索引
+            gl.drawElements(
+                gl.TRIANGLES,
+                buffers.count,
+                gl.UNSIGNED_SHORT,
+                0
+            );
+        }
+
+        // 初始化全局变量
+        const vsSource = document.getElementById('vertex-shader').textContent;
+        const fsSource = document.getElementById('fragment-shader').textContent;
+
+        // 初始化着色器程序
+        const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+        // 收集着色器程序信息
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                position: gl.getAttribLocation(shaderProgram, 'a_position'),
+                textureCoord: gl.getAttribLocation(shaderProgram, 'a_texCoord')
+            },
+            uniformLocations: {
+                transformMatrix: gl.getUniformLocation(shaderProgram, 'u_transformMatrix'),
+                baseTexture: gl.getUniformLocation(shaderProgram, 'u_baseTexture'),
+                blendTexture: gl.getUniformLocation(shaderProgram, 'u_blendTexture'),
+                maskTexture: gl.getUniformLocation(shaderProgram, 'u_maskTexture'),
+                blendFactor: gl.getUniformLocation(shaderProgram, 'u_blendFactor')
+            }
+        };
+
+        // 初始化顶点缓冲区
+        const buffers = initBuffers(gl);
+
+        // 当前状态
+        let currentBlendFactor = 0.5;
+        let currentRotation = 0;
+        let currentScale = 1.0;
+        let textures = { base: null, blend: null, mask: null };
+
+        // 添加控件监听器
+        const blendFactorSlider = document.getElementById('blendFactor');
+        const rotationSlider = document.getElementById('rotation');
+        const scaleSlider = document.getElementById('scale');
+        const blendFactorValue = document.getElementById('blendFactorValue');
+        const rotationValue = document.getElementById('rotationValue');
+        const scaleValue = document.getElementById('scaleValue');
+
+        blendFactorSlider.addEventListener('input', function () {
+            currentBlendFactor = parseFloat(this.value);
+            blendFactorValue.textContent = currentBlendFactor.toFixed(2);
+            drawScene();
+        });
+
+        rotationSlider.addEventListener('input', function () {
+            currentRotation = parseInt(this.value);
+            rotationValue.textContent = currentRotation + '°';
+            drawScene();
+        });
+
+        scaleSlider.addEventListener('input', function () {
+            currentScale = parseFloat(this.value);
+            scaleValue.textContent = currentScale.toFixed(2);
+            drawScene();
+        });
+
+        // 处理窗口大小改变
+        window.addEventListener('resize', function () {
+            // 更新canvas尺寸
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            // 更新WebGL视口
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            drawScene();
+        });
+
+        // 异步加载所有纹理并初始化场景
+        async function initTexturesAndStart() {
+            try {
+                textures.base = await loadTexture(gl, 'textures/grass.jpg');
+                textures.blend = await loadTexture(gl, 'textures/path.jpg');
+                textures.mask = await loadTexture(gl, 'textures/path_mask.jpg');
+
+                // 所有纹理加载完成后，绘制场景
+                drawScene();
+            } catch (error) {
+                console.error('加载纹理时出错:', error);
+            }
+        }
+
+        // 启动纹理加载和场景初始化
+        initTexturesAndStart();
+    </script>
+</body>
+
+</html>

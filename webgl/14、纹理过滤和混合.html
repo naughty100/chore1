@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL纹理过滤和混合</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        h2 {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        .preview {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .preview-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #ddd;
+            margin: 15px 0;
+        }
+
+        .blend-controls {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>WebGL纹理过滤和混合</h1>
+
+        <div class="controls">
+            <div class="row">
+                <div class="column">
+                    <h2>纹理过滤设置</h2>
+                    <div class="control-group">
+                        <label for="minFilter">缩小过滤 (MIN_FILTER):</label>
+                        <select id="minFilter">
+                            <option value="NEAREST">NEAREST - 最近点采样</option>
+                            <option value="LINEAR" selected>LINEAR - 线性过滤</option>
+                            <option value="NEAREST_MIPMAP_NEAREST">NEAREST_MIPMAP_NEAREST - 最近点采样与最近MIP级别</option>
+                            <option value="LINEAR_MIPMAP_NEAREST">LINEAR_MIPMAP_NEAREST - 线性过滤与最近MIP级别</option>
+                            <option value="NEAREST_MIPMAP_LINEAR">NEAREST_MIPMAP_LINEAR - 最近点采样与线性MIP级别</option>
+                            <option value="LINEAR_MIPMAP_LINEAR">LINEAR_MIPMAP_LINEAR - 线性过滤与线性MIP级别</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="magFilter">放大过滤 (MAG_FILTER):</label>
+                        <select id="magFilter">
+                            <option value="NEAREST">NEAREST - 最近点采样</option>
+                            <option value="LINEAR" selected>LINEAR - 线性过滤</option>
+                        </select>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="control-group">
+                        <label for="wrapS">水平包裹模式 (WRAP_S):</label>
+                        <select id="wrapS">
+                            <option value="REPEAT" selected>REPEAT - 重复</option>
+                            <option value="CLAMP_TO_EDGE">CLAMP_TO_EDGE - 边缘钳制</option>
+                            <option value="MIRRORED_REPEAT">MIRRORED_REPEAT - 镜像重复</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="wrapT">垂直包裹模式 (WRAP_T):</label>
+                        <select id="wrapT">
+                            <option value="REPEAT" selected>REPEAT - 重复</option>
+                            <option value="CLAMP_TO_EDGE">CLAMP_TO_EDGE - 边缘钳制</option>
+                            <option value="MIRRORED_REPEAT">MIRRORED_REPEAT - 镜像重复</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <h2>纹理混合设置</h2>
+                    <div class="preview">
+                        <div class="preview-title">纹理 1</div>
+                        <img src="textures/texture1.jpg" alt="纹理1" width="100%">
+                    </div>
+                    <div class="preview">
+                        <div class="preview-title">纹理 2</div>
+                        <img src="textures/texture2.jpg" alt="纹理2" width="100%">
+                    </div>
+
+                    <div class="blend-controls">
+                        <div class="control-group">
+                            <label for="blendMode">混合模式:</label>
+                            <select id="blendMode">
+                                <option value="MIX" selected>线性混合 (Mix)</option>
+                                <option value="ADD">相加 (Add)</option>
+                                <option value="MULTIPLY">相乘 (Multiply)</option>
+                                <option value="SCREEN">滤色 (Screen)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="mixRatio">混合比例: <span id="mixRatioValue">0.50</span></label>
+                            <input type="range" id="mixRatio" min="0" max="1" step="0.01" value="0.5"
+                                style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="glCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec2 a_texCoord;
+        
+        varying vec2 v_texCoord;
+        
+        void main() {
+            gl_Position = a_position;
+            v_texCoord = a_texCoord;
+        }
+    </script>
+
+    <!-- 片段着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        varying vec2 v_texCoord;
+        
+        uniform sampler2D u_texture1;
+        uniform sampler2D u_texture2;
+        uniform float u_mixRatio;
+        uniform int u_blendMode;
+        
+        // 混合模式常量
+        const int BLEND_MIX = 0;
+        const int BLEND_ADD = 1;
+        const int BLEND_MULTIPLY = 2;
+        const int BLEND_SCREEN = 3;
+        
+        void main() {
+            vec4 color1 = texture2D(u_texture1, v_texCoord);
+            vec4 color2 = texture2D(u_texture2, v_texCoord);
+            vec4 outputColor;
+            
+            // 根据不同的混合模式执行不同的混合操作
+            if (u_blendMode == BLEND_MIX) {
+                // 线性混合
+                outputColor = mix(color1, color2, u_mixRatio);
+            } else if (u_blendMode == BLEND_ADD) {
+                // 加法混合
+                outputColor = color1 + color2 * u_mixRatio;
+                outputColor = clamp(outputColor, 0.0, 1.0); // 确保结果在有效范围内
+            } else if (u_blendMode == BLEND_MULTIPLY) {
+                // 乘法混合
+                outputColor = mix(color1, color1 * color2, u_mixRatio);
+            } else if (u_blendMode == BLEND_SCREEN) {
+                // 滤色混合
+                vec4 screenColor = vec4(1.0) - (vec4(1.0) - color1) * (vec4(1.0) - color2);
+                outputColor = mix(color1, screenColor, u_mixRatio);
+            } else {
+                // 默认使用线性混合
+                outputColor = mix(color1, color2, u_mixRatio);
+            }
+            
+            gl_FragColor = outputColor;
+        }
+    </script>
+
+    <script>
+        // 获取canvas元素和WebGL上下文
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持它。');
+            throw new Error('WebGL不可用');
+        }
+
+        // 加载着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // 创建着色器程序
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // 检查程序是否链接成功
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            // 检查着色器是否编译成功
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('着色器编译错误: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 初始化顶点缓冲区（两个三角形组成一个矩形）
+        function initBuffers(gl) {
+            // 创建顶点缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // 矩形的顶点坐标
+            const positions = [
+                -1.0, -1.0,
+                1.0, -1.0,
+                1.0, 1.0,
+                -1.0, 1.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+            // 创建纹理坐标缓冲区
+            const texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+
+            // 纹理坐标 - 我们使用0.0到4.0的范围来测试纹理包裹
+            const textureCoordinates = [
+                0.0, 4.0,
+                4.0, 4.0,
+                4.0, 0.0,
+                0.0, 0.0,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+            // 创建索引缓冲区
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+            // 定义两个三角形的索引
+            const indices = [
+                0, 1, 2,
+                0, 2, 3,
+            ];
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                textureCoord: texCoordBuffer,
+                indices: indexBuffer,
+            };
+        }
+
+        // 加载纹理
+        function loadTexture(gl, url, filterSettings) {
+            return new Promise((resolve) => {
+                const texture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+
+                // 初始纹理为1x1蓝色像素
+                gl.texImage2D(
+                    gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0,
+                    gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255])
+                );
+
+                // 加载图片
+                const image = new Image();
+                image.onload = function () {
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(
+                        gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image
+                    );
+
+                    // 根据图片尺寸决定是否生成mipmap
+                    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+                        gl.generateMipmap(gl.TEXTURE_2D);
+
+                        // 应用过滤设置
+                        applyTextureFilters(gl, filterSettings);
+                    } else {
+                        // 非2的幂的图片，必须设置为CLAMP_TO_EDGE
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    }
+
+                    resolve(texture);
+                };
+                image.src = url;
+            });
+        }
+
+        // 判断一个数是否为2的幂
+        function isPowerOf2(value) {
+            return (value & (value - 1)) === 0;
+        }
+
+        // 应用纹理过滤设置
+        function applyTextureFilters(gl, settings) {
+            // 应用MIN_FILTER设置
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[settings.minFilter]);
+
+            // 应用MAG_FILTER设置
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[settings.magFilter]);
+
+            // 应用纹理包裹设置
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[settings.wrapS]);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[settings.wrapT]);
+        }
+
+        // 绘制场景
+        function drawScene(gl, programInfo, buffers, textures, settings) {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            // 启用着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 设置着色器的属性和Uniforms
+
+            // 设置顶点位置属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.vertexPosition,
+                2,        // 2个坐标分量 (x, y)
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+            // 设置纹理坐标属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.textureCoord,
+                2,        // 2个坐标分量 (u, v)
+                gl.FLOAT, // 数据类型
+                false,    // 不需要归一化
+                0,        // 步长
+                0         // 偏移量
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+
+            // 绑定索引缓冲区
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+            // 设置纹理
+            // 第一个纹理
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, textures[0]);
+            gl.uniform1i(programInfo.uniformLocations.texture1, 0);
+
+            // 第二个纹理
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, textures[1]);
+            gl.uniform1i(programInfo.uniformLocations.texture2, 1);
+
+            // 设置混合比例和混合模式
+            gl.uniform1f(programInfo.uniformLocations.mixRatio, settings.mixRatio);
+            gl.uniform1i(programInfo.uniformLocations.blendMode, settings.blendMode);
+
+            // 绘制
+            gl.drawElements(
+                gl.TRIANGLES,
+                6,                // 6个顶点 (2个三角形)
+                gl.UNSIGNED_SHORT,
+                0                 // 偏移量
+            );
+        }
+
+        // 获取着色器源码
+        const vsSource = document.getElementById('vertex-shader').textContent;
+        const fsSource = document.getElementById('fragment-shader').textContent;
+
+        // 初始化着色器程序
+        const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+        // 收集着色器变量位置
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(shaderProgram, 'a_position'),
+                textureCoord: gl.getAttribLocation(shaderProgram, 'a_texCoord'),
+            },
+            uniformLocations: {
+                texture1: gl.getUniformLocation(shaderProgram, 'u_texture1'),
+                texture2: gl.getUniformLocation(shaderProgram, 'u_texture2'),
+                mixRatio: gl.getUniformLocation(shaderProgram, 'u_mixRatio'),
+                blendMode: gl.getUniformLocation(shaderProgram, 'u_blendMode')
+            },
+        };
+
+        // 初始化缓冲区
+        const buffers = initBuffers(gl);
+
+        // 当前设置
+        const settings = {
+            // 纹理过滤设置
+            minFilter: 'LINEAR',
+            magFilter: 'LINEAR',
+            wrapS: 'REPEAT',
+            wrapT: 'REPEAT',
+
+            // 混合设置
+            mixRatio: 0.5,
+            blendMode: 0  // 0: MIX, 1: ADD, 2: MULTIPLY, 3: SCREEN
+        };
+
+        // 纹理数组
+        let textures = [];
+
+        // 获取控件
+        const minFilterSelect = document.getElementById('minFilter');
+        const magFilterSelect = document.getElementById('magFilter');
+        const wrapSSelect = document.getElementById('wrapS');
+        const wrapTSelect = document.getElementById('wrapT');
+        const blendModeSelect = document.getElementById('blendMode');
+        const mixRatioSlider = document.getElementById('mixRatio');
+        const mixRatioValue = document.getElementById('mixRatioValue');
+
+        // 添加控件监听器
+        minFilterSelect.addEventListener('change', function () {
+            settings.minFilter = this.value;
+            updateTextures();
+        });
+
+        magFilterSelect.addEventListener('change', function () {
+            settings.magFilter = this.value;
+            updateTextures();
+        });
+
+        wrapSSelect.addEventListener('change', function () {
+            settings.wrapS = this.value;
+            updateTextures();
+        });
+
+        wrapTSelect.addEventListener('change', function () {
+            settings.wrapT = this.value;
+            updateTextures();
+        });
+
+        blendModeSelect.addEventListener('change', function () {
+            switch (this.value) {
+                case 'MIX': settings.blendMode = 0; break;
+                case 'ADD': settings.blendMode = 1; break;
+                case 'MULTIPLY': settings.blendMode = 2; break;
+                case 'SCREEN': settings.blendMode = 3; break;
+                default: settings.blendMode = 0;
+            }
+            render();
+        });
+
+        mixRatioSlider.addEventListener('input', function () {
+            settings.mixRatio = parseFloat(this.value);
+            mixRatioValue.textContent = settings.mixRatio.toFixed(2);
+            render();
+        });
+
+        // 更新纹理
+        async function updateTextures() {
+            const filterSettings = {
+                minFilter: settings.minFilter,
+                magFilter: settings.magFilter,
+                wrapS: settings.wrapS,
+                wrapT: settings.wrapT
+            };
+
+            // 重新加载纹理
+            textures = await Promise.all([
+                loadTexture(gl, 'textures/texture1.jpg', filterSettings),
+                loadTexture(gl, 'textures/texture2.jpg', filterSettings)
+            ]);
+
+            render();
+        }
+
+        // 渲染函数
+        function render() {
+            if (textures.length === 2) {
+                drawScene(gl, programInfo, buffers, textures, settings);
+            }
+        }
+
+        // 处理窗口大小改变
+        window.addEventListener('resize', function () {
+            // 更新canvas尺寸
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            // 更新WebGL视口
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            render();
+        });
+
+        // 初始化
+        updateTextures();
+    </script>
+</body>
+
+</html>
