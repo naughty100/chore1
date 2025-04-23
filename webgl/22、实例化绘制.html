@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL实例化绘制</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+
+        .description {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 0 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebGL实例化绘制</h1>
+
+    <div class="description">
+        <p>本案例展示了WebGL中的实例化绘制技术：</p>
+        <ul>
+            <li>使用单个绘制调用渲染多个相似对象</li>
+            <li>通过实例化数组传递每个实例的属性</li>
+            <li>在顶点着色器中使用实例ID访问实例数据</li>
+            <li>提高渲染大量相似对象的性能</li>
+        </ul>
+    </div>
+
+    <canvas id="glCanvas" width="600" height="400"></canvas>
+
+    <div class="controls">
+        <button id="drawButton">绘制</button>
+        <button id="clearButton">清除</button>
+    </div>
+
+    <script>
+        // 获取HTML元素
+        const canvas = document.getElementById('glCanvas');
+        const drawButton = document.getElementById('drawButton');
+        const clearButton = document.getElementById('clearButton');
+
+        // 获取WebGL上下文
+        const gl = canvas.getContext('webgl');
+        if (!gl) {
+            alert('无法初始化WebGL，您的浏览器可能不支持此功能');
+            return;
+        }
+
+        // 顶点着色器代码
+        const vsSource = `
+            attribute vec2 a_Position;
+            attribute vec3 a_InstanceColor;
+            attribute vec2 a_InstanceOffset;
+            
+            varying vec3 v_Color;
+            
+            void main() {
+                gl_Position = vec4(a_Position + a_InstanceOffset, 0.0, 1.0);
+                v_Color = a_InstanceColor;
+            }
+        `;
+
+        // 片元着色器代码
+        const fsSource = `
+            precision mediump float;
+            varying vec3 v_Color;
+            
+            void main() {
+                gl_FragColor = vec4(v_Color, 1.0);
+            }
+        `;
+
+        // 初始化着色器程序
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('无法初始化着色器程序: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        // 加载着色器
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('着色器编译错误: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // 初始化缓冲区
+        function initBuffers(gl) {
+            // 基础几何图形（一个三角形）
+            const positions = new Float32Array([
+                0.0, 0.1,   // 顶部
+                -0.1, -0.1,  // 左下
+                0.1, -0.1    // 右下
+            ]);
+
+            // 实例化属性：每个实例的偏移量
+            const offsets = new Float32Array(100 * 2);
+            for (let i = 0; i < 100; i++) {
+                offsets[i * 2] = (Math.random() * 2 - 1) * 0.9;
+                offsets[i * 2 + 1] = (Math.random() * 2 - 1) * 0.9;
+            }
+
+            // 实例化属性：每个实例的颜色
+            const colors = new Float32Array(100 * 3);
+            for (let i = 0; i < 100; i++) {
+                colors[i * 3] = Math.random();
+                colors[i * 3 + 1] = Math.random();
+                colors[i * 3 + 2] = Math.random();
+            }
+
+            // 创建并绑定位置缓冲区
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+            // 创建并绑定偏移量缓冲区
+            const offsetBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, offsetBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, offsets, gl.STATIC_DRAW);
+
+            // 创建并绑定颜色缓冲区
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                offset: offsetBuffer,
+                color: colorBuffer,
+                vertexCount: 3,
+                instanceCount: 100
+            };
+        }
+
+        // 绘制场景
+        function drawScene(gl, programInfo, buffers) {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            // 告诉WebGL如何使用着色器程序
+            gl.useProgram(programInfo.program);
+
+            // 设置位置属性
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.position,
+                2,          // 每个顶点2个分量
+                gl.FLOAT,   // 数据类型
+                false,      // 不归一化
+                0,          // 步长
+                0           // 偏移
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+            // 设置偏移量属性（实例化数组）
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.offset);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.offset,
+                2,          // 每个实例2个分量
+                gl.FLOAT,   // 数据类型
+                false,      // 不归一化
+                0,          // 步长
+                0           // 偏移
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.offset);
+            gl.vertexAttribDivisor(programInfo.attribLocations.offset, 1); // 每实例更新一次
+
+            // 设置颜色属性（实例化数组）
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.color,
+                3,          // 每个实例3个分量
+                gl.FLOAT,   // 数据类型
+                false,      // 不归一化
+                0,          // 步长
+                0           // 偏移
+            );
+            gl.enableVertexAttribArray(programInfo.attribLocations.color);
+            gl.vertexAttribDivisor(programInfo.attribLocations.color, 1); // 每实例更新一次
+
+            // 绘制
+            gl.drawArraysInstanced(
+                gl.TRIANGLES,
+                0,                  // 偏移
+                buffers.vertexCount, // 顶点数量
+                buffers.instanceCount // 实例数量
+            );
+        }
+
+        // 初始化
+        function init() {
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    position: gl.getAttribLocation(shaderProgram, 'a_Position'),
+                    offset: gl.getAttribLocation(shaderProgram, 'a_InstanceOffset'),
+                    color: gl.getAttribLocation(shaderProgram, 'a_InstanceColor')
+                }
+            };
+
+            const buffers = initBuffers(gl);
+
+            drawButton.onclick = function () {
+                drawScene(gl, programInfo, buffers);
+            };
+
+            clearButton.onclick = function () {
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            };
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+
+</html>
