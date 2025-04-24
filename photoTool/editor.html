@@ -19,15 +19,24 @@
 
         <main class="app-main">
             <div class="editor-panel">
-                <div class="canvas-container">
-                    <canvas id="bookmarkCanvas" width="200" height="600">
-                        您的浏览器不支持HTML5 Canvas元素
-                    </canvas>
-                    <div class="canvas-controls">
-                        <button id="zoomInBtn" class="btn small">+</button>
-                        <span id="zoomLevel">100%</span>
-                        <button id="zoomOutBtn" class="btn small">-</button>
+                <div class="background-board">
+                    <div class="canvas-container">
+                        <canvas id="bookmarkCanvas" width="200" height="600">
+                            您的浏览器不支持HTML5 Canvas元素
+                        </canvas>
+                        <div class="canvas-controls">
+                            <button id="zoomInBtn" class="btn small">+</button>
+                            <span id="zoomLevel">100%</span>
+                            <button id="zoomOutBtn" class="btn small">-</button>
+                        </div>
                     </div>
+                </div>
+                <div class="board-controls">
+                    <div class="control-group">
+                        <label for="boardColor">背景板颜色</label>
+                        <input type="color" id="boardColor" value="#F5F5F5">
+                    </div>
+                    <button id="applyExtractedColors" class="btn small" style="display: none;">应用提取的颜色到背景板</button>
                 </div>
             </div>
 

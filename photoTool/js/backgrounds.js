@@ -305,23 +305,38 @@ class BackgroundManager {
             const cropAreaElement = this.cropPreviewImage.parentElement;
             cropAreaElement.style.height = `${imgHeight}px`;
 
-            // 初始化裁剪区域 - 使用更合理的默认尺寸
-            // 对于竖图，默认选择中间部分；对于横图，选择中心区域
+            // 初始化裁剪区域 - 使用固定的书签比例 (1:3)
+            const bookmarkRatio = 1/3; // 宽高比 = 200:600
+
+            // 计算选区尺寸，保持书签比例
             let cropWidth, cropHeight, cropX, cropY;
 
-            if (imgRatio < 1) {
-                // 竖图 - 选择中间部分，宽度为图片宽度，高度为图片高度的一半
-                cropWidth = imgWidth * 0.8;
-                cropHeight = Math.min(imgHeight * 0.6, 300);
-                cropX = (imgWidth - cropWidth) / 2;
-                cropY = (imgHeight - cropHeight) / 2;
+            // 根据图片尺寸决定选区大小
+            if (imgWidth < imgHeight) {
+                // 竖图 - 选区宽度为图片宽度的60%
+                cropWidth = imgWidth * 0.6;
+                cropHeight = cropWidth / bookmarkRatio; // 保持书签比例
+
+                // 如果计算出的高度超过图片高度，则调整
+                if (cropHeight > imgHeight * 0.9) {
+                    cropHeight = imgHeight * 0.9;
+                    cropWidth = cropHeight * bookmarkRatio;
+                }
             } else {
-                // 横图 - 选择中心区域，宽高比接近书签比例
-                cropWidth = Math.min(imgWidth * 0.3, 200);
-                cropHeight = Math.min(imgHeight * 0.8, cropWidth * 3);
-                cropX = (imgWidth - cropWidth) / 2;
-                cropY = (imgHeight - cropHeight) / 2;
+                // 横图 - 选区高度为图片高度的80%
+                cropHeight = imgHeight * 0.8;
+                cropWidth = cropHeight * bookmarkRatio; // 保持书签比例
+
+                // 如果计算出的宽度超过图片宽度，则调整
+                if (cropWidth > imgWidth * 0.9) {
+                    cropWidth = imgWidth * 0.9;
+                    cropHeight = cropWidth / bookmarkRatio;
+                }
             }
+
+            // 居中放置选区
+            cropX = (imgWidth - cropWidth) / 2;
+            cropY = (imgHeight - cropHeight) / 2;
 
             // 设置选区位置和大小
             this.cropSelection.style.left = `${cropX}px`;
@@ -339,6 +354,9 @@ class BackgroundManager {
 
             // 绑定裁剪区域事件
             this.bindCropEvents();
+
+            // 立即应用裁剪预览
+            this.updateCropPreview();
         };
     }
 
@@ -394,6 +412,9 @@ class BackgroundManager {
             const dx = e.clientX - this.cropState.startX;
             const dy = e.clientY - this.cropState.startY;
 
+            // 书签固定比例
+            const bookmarkRatio = 1/3; // 宽高比 = 200:600
+
             if (this.cropState.dragging) {
                 // 移动裁剪区域
                 let newX = this.cropState.cropX + dx;
@@ -425,13 +446,21 @@ class BackgroundManager {
                     cropAreaElement.scrollTop -= (containerRect.top - selectionRect.top + 10);
                 }
             } else if (this.cropState.resizing) {
-                // 调整裁剪区域大小
+                // 调整裁剪区域大小，但保持固定比例
                 let newWidth = this.cropState.cropWidth + dx;
-                let newHeight = this.cropState.cropHeight + dy;
+
+                // 根据固定比例计算高度
+                let newHeight = newWidth / bookmarkRatio;
 
                 // 限制最小尺寸和最大尺寸
-                newWidth = Math.max(20, Math.min(newWidth, this.cropState.imageWidth - this.cropState.cropX));
-                newHeight = Math.max(20, Math.min(newHeight, this.cropState.imageHeight - this.cropState.cropY));
+                newWidth = Math.max(50, Math.min(newWidth, this.cropState.imageWidth - this.cropState.cropX));
+                newHeight = newWidth / bookmarkRatio; // 重新计算高度以保持比例
+
+                // 确保高度不超出图片
+                if (this.cropState.cropY + newHeight > this.cropState.imageHeight) {
+                    newHeight = this.cropState.imageHeight - this.cropState.cropY;
+                    newWidth = newHeight * bookmarkRatio; // 调整宽度以保持比例
+                }
 
                 // 更新裁剪区域大小
                 this.cropSelection.style.width = `${newWidth}px`;
@@ -454,12 +483,18 @@ class BackgroundManager {
             // 更新起始位置
             this.cropState.startX = e.clientX;
             this.cropState.startY = e.clientY;
+
+            // 实时更新裁剪预览
+            this.updateCropPreview();
         };
 
         this.cropMouseUpHandler = () => {
             // 重置拖动状态
             this.cropState.dragging = false;
             this.cropState.resizing = false;
+
+            // 更新裁剪预览
+            this.updateCropPreview();
         };
 
         // 添加事件监听器
@@ -467,15 +502,18 @@ class BackgroundManager {
         document.addEventListener('mousemove', this.cropMouseMoveHandler);
         document.addEventListener('mouseup', this.cropMouseUpHandler);
 
-        // 应用裁剪按钮
-        this.applyCropBtn.onclick = () => this.applyCrop();
+        // 应用裁剪按钮 - 隐藏裁剪区域，应用当前预览
+        this.applyCropBtn.onclick = () => {
+            // 隐藏裁剪区域
+            this.imageCropContainer.style.display = 'none';
+        };
 
         // 重置裁剪按钮
         this.resetCropBtn.onclick = () => this.resetCrop();
     }
 
-    // 应用裁剪
-    applyCrop() {
+    // 更新裁剪预览 - 实时更新裁剪区域的预览效果
+    updateCropPreview() {
         if (!this.backgroundLayer) return;
 
         const data = this.backgroundLayer.getData();
@@ -534,14 +572,17 @@ class BackgroundManager {
 
             this.backgroundLayer.setData(data);
 
-            // 隐藏裁剪区域
-            this.imageCropContainer.style.display = 'none';
-
             // 重新渲染
             this.render();
         };
 
         croppedImg.src = canvas.toDataURL('image/png');
+    }
+
+    // 应用裁剪 - 保留此方法以兼容现有代码，但实际上已经通过实时预览替代
+    applyCrop() {
+        // 隐藏裁剪区域
+        this.imageCropContainer.style.display = 'none';
     }
 
     // 重置裁剪
@@ -558,8 +599,8 @@ class BackgroundManager {
 
         this.backgroundLayer.setData(data);
 
-        // 隐藏裁剪区域
-        this.imageCropContainer.style.display = 'none';
+        // 重新初始化裁剪区域
+        this.showImageCropArea(data.originalImage);
 
         // 重新渲染
         this.render();
@@ -626,9 +667,16 @@ class BackgroundManager {
             const gradientData = data.gradient;
             gradientData.type = 'linear';
             gradientData.angle = 45;
+
+            // 转换颜色为十六进制
+            const hexColors = [
+                this.rgbToHex(dominantColors[0]),
+                this.rgbToHex(dominantColors[1])
+            ];
+
             gradientData.stops = [
-                { color: this.rgbToHex(dominantColors[0]), position: 0 },
-                { color: this.rgbToHex(dominantColors[1]), position: 100 }
+                { color: hexColors[0], position: 0 },
+                { color: hexColors[1], position: 100 }
             ];
 
             // 更新背景图层数据
@@ -640,6 +688,11 @@ class BackgroundManager {
 
             // 重新渲染
             this.render();
+
+            // 将提取的颜色传递给Canvas管理器，用于背景板
+            if (canvasManager) {
+                canvasManager.setExtractedColors(hexColors);
+            }
         }
     }
 

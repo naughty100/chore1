@@ -17,6 +17,12 @@ class BookmarkCanvas {
         // 缩放比例
         this.scale = 1;
 
+        // 背景板设置
+        this.boardColor = '#F5F5F5';
+        this.boardColorInput = document.getElementById('boardColor');
+        this.applyExtractedColorsBtn = document.getElementById('applyExtractedColors');
+        this.extractedColors = null;
+
         // 初始化Canvas
         this.initCanvas();
 
@@ -83,6 +89,39 @@ class BookmarkCanvas {
                 this.zoomOut();
             }
         });
+
+        // 背景板颜色事件
+        this.boardColorInput.addEventListener('input', (e) => {
+            this.boardColor = e.target.value;
+            this.updateBackgroundBoard();
+        });
+
+        // 应用提取的颜色到背景板
+        this.applyExtractedColorsBtn.addEventListener('click', () => {
+            if (this.extractedColors && this.extractedColors.length >= 2) {
+                // 创建渐变背景
+                const boardElement = document.querySelector('.background-board');
+                const gradient = `linear-gradient(45deg, ${this.extractedColors[0]}, ${this.extractedColors[1]})`;
+                boardElement.style.background = gradient;
+
+                // 隐藏按钮
+                this.applyExtractedColorsBtn.style.display = 'none';
+            }
+        });
+    }
+
+    // 更新背景板颜色
+    updateBackgroundBoard() {
+        const boardElement = document.querySelector('.background-board');
+        boardElement.style.backgroundColor = this.boardColor;
+    }
+
+    // 设置提取的颜色
+    setExtractedColors(colors) {
+        this.extractedColors = colors;
+        if (colors && colors.length >= 2) {
+            this.applyExtractedColorsBtn.style.display = 'block';
+        }
     }
 
     // 渲染Canvas
