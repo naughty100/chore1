@@ -36,6 +36,7 @@
                     <button class="tab-btn active" data-tab="background">背景</button>
                     <button class="tab-btn" data-tab="text">文字</button>
                     <button class="tab-btn" data-tab="icon">图标</button>
+                    <button class="tab-btn" data-tab="border">边框</button>
                     <button class="tab-btn" data-tab="template">模板</button>
                 </div>
 
@@ -108,6 +109,22 @@
                                 <label for="bgImage">选择图片</label>
                                 <input type="file" id="bgImage" accept="image/*">
                             </div>
+
+                            <!-- 图片区域选择 -->
+                            <div class="control-group" id="imageCropContainer" style="display: none;">
+                                <label>选择区域</label>
+                                <div class="image-crop-wrapper">
+                                    <div class="image-crop-area">
+                                        <img id="cropPreviewImage" src="" alt="预览图">
+                                        <div id="cropSelection" class="crop-selection"></div>
+                                    </div>
+                                </div>
+                                <div class="crop-controls">
+                                    <button id="applyCropBtn" class="btn small">应用选区</button>
+                                    <button id="resetCropBtn" class="btn small">重置选区</button>
+                                </div>
+                            </div>
+
                             <div class="control-group">
                                 <label for="imageRepeat">平铺方式</label>
                                 <select id="imageRepeat">
@@ -117,10 +134,15 @@
                                     <option value="repeat-y">垂直平铺</option>
                                 </select>
                             </div>
+
                             <div class="control-group">
                                 <label for="imageOpacity">不透明度</label>
                                 <input type="range" id="imageOpacity" min="0" max="100" value="100">
                                 <span id="imageOpacityValue">100%</span>
+                            </div>
+
+                            <div class="control-group">
+                                <button id="extractColorsBtn" class="btn">从图片提取渐变色</button>
                             </div>
                         </div>
 
@@ -264,6 +286,60 @@
                         </div>
                     </div>
 
+                    <!-- 边框设置面板 -->
+                    <div class="tab-pane" id="border-tab" style="display: none;">
+                        <h3>边框样式</h3>
+                        <div class="control-group">
+                            <label for="borderStyle">边框样式</label>
+                            <select id="borderStyle">
+                                <option value="none">无边框</option>
+                                <option value="solid">实线边框</option>
+                                <option value="double">双线边框</option>
+                                <option value="dashed">虚线边框</option>
+                                <option value="3d">3D立体边框</option>
+                                <option value="shadow">阴影边框</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="borderWidth">边框宽度</label>
+                            <input type="range" id="borderWidth" min="0" max="20" value="2">
+                            <span id="borderWidthValue">2px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="borderColor">边框颜色</label>
+                            <input type="color" id="borderColor" value="#000000">
+                        </div>
+                        <div class="control-group">
+                            <label for="borderRadius">圆角半径</label>
+                            <input type="range" id="borderRadius" min="0" max="30" value="0">
+                            <span id="borderRadiusValue">0px</span>
+                        </div>
+
+                        <!-- 3D边框和阴影设置 -->
+                        <div id="shadowSettings">
+                            <h3>阴影设置</h3>
+                            <div class="control-group">
+                                <label for="shadowDepth">阴影深度</label>
+                                <input type="range" id="shadowDepth" min="1" max="20" value="5">
+                                <span id="shadowDepthValue">5px</span>
+                            </div>
+                            <div class="control-group">
+                                <label for="shadowColor">阴影颜色</label>
+                                <input type="color" id="shadowColor" value="#000000">
+                            </div>
+                            <div class="control-group">
+                                <label for="shadowOpacity">阴影不透明度</label>
+                                <input type="range" id="shadowOpacity" min="0" max="100" value="30">
+                                <span id="shadowOpacityValue">30%</span>
+                            </div>
+                            <div class="control-group">
+                                <label for="shadowAngle">阴影角度</label>
+                                <input type="range" id="shadowAngle" min="0" max="360" value="45">
+                                <span id="shadowAngleValue">45°</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 模板设置面板 -->
                     <div class="tab-pane" id="template-tab" style="display: none;">
                         <h3>书签模板</h3>
@@ -297,6 +373,7 @@
     <script src="js/backgrounds.js"></script>
     <script src="js/text.js"></script>
     <script src="js/icons.js"></script>
+    <script src="js/border.js"></script>
     <script src="js/export.js"></script>
     <script src="js/main.js"></script>
 </body>
