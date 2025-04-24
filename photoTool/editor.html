@@ -126,12 +126,25 @@
                             </div>
 
                             <div class="control-group">
+                                <button id="reopenCropBtn" class="btn small">重新裁剪图片</button>
+                            </div>
+
+                            <div class="control-group">
                                 <label for="imageRepeat">平铺方式</label>
                                 <select id="imageRepeat">
                                     <option value="no-repeat">不平铺</option>
                                     <option value="repeat" selected>平铺</option>
                                     <option value="repeat-x">水平平铺</option>
                                     <option value="repeat-y">垂直平铺</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="imageFit">适应方式</label>
+                                <select id="imageFit">
+                                    <option value="contain">包含全图</option>
+                                    <option value="cover" selected>填满书签</option>
+                                    <option value="center">居中显示</option>
                                 </select>
                             </div>
 

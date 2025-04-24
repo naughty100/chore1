@@ -25,6 +25,7 @@ class BackgroundManager {
         // 图片背景设置
         this.bgImageInput = document.getElementById('bgImage');
         this.imageRepeatSelect = document.getElementById('imageRepeat');
+        this.imageFitSelect = document.getElementById('imageFit');
         this.imageOpacityInput = document.getElementById('imageOpacity');
         this.imageOpacityValue = document.getElementById('imageOpacityValue');
         this.imageCropContainer = document.getElementById('imageCropContainer');
@@ -32,6 +33,7 @@ class BackgroundManager {
         this.cropSelection = document.getElementById('cropSelection');
         this.applyCropBtn = document.getElementById('applyCropBtn');
         this.resetCropBtn = document.getElementById('resetCropBtn');
+        this.reopenCropBtn = document.getElementById('reopenCropBtn');
         this.extractColorsBtn = document.getElementById('extractColorsBtn');
 
         // 裁剪区域状态
@@ -275,68 +277,98 @@ class BackgroundManager {
         // 设置预览图片
         this.cropPreviewImage.src = img.src;
 
-        // 计算图片尺寸和裁剪区域
-        const containerWidth = this.imageCropContainer.clientWidth;
-        const containerHeight = 200; // 固定高度
+        // 等待图片加载完成后再计算尺寸
+        this.cropPreviewImage.onload = () => {
+            // 获取容器宽度
+            const containerWidth = this.imageCropContainer.clientWidth || 280; // 默认宽度
 
-        const imgRatio = img.width / img.height;
-        let imgWidth, imgHeight;
+            // 计算图片尺寸，保持原始宽高比
+            const imgRatio = img.width / img.height;
+            let imgWidth, imgHeight;
 
-        if (imgRatio > containerWidth / containerHeight) {
-            // 图片较宽
+            // 设置图片宽度为容器宽度，高度按比例计算
             imgWidth = containerWidth;
             imgHeight = containerWidth / imgRatio;
-        } else {
-            // 图片较高
-            imgHeight = containerHeight;
-            imgWidth = containerHeight * imgRatio;
-        }
 
-        // 设置图片尺寸
-        this.cropPreviewImage.style.width = `${imgWidth}px`;
-        this.cropPreviewImage.style.height = `${imgHeight}px`;
+            // 如果图片太高，限制最大高度
+            const maxHeight = 500; // 最大高度
+            if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = maxHeight * imgRatio;
+            }
 
-        // 初始化裁剪区域
-        const cropWidth = Math.min(imgWidth, 100);
-        const cropHeight = Math.min(imgHeight, 300);
-        const cropX = (imgWidth - cropWidth) / 2;
-        const cropY = (imgHeight - cropHeight) / 2;
+            // 设置图片尺寸
+            this.cropPreviewImage.style.width = `${imgWidth}px`;
+            this.cropPreviewImage.style.height = `${imgHeight}px`;
 
-        this.cropSelection.style.left = `${cropX}px`;
-        this.cropSelection.style.top = `${cropY}px`;
-        this.cropSelection.style.width = `${cropWidth}px`;
-        this.cropSelection.style.height = `${cropHeight}px`;
+            // 设置裁剪区域容器的高度，确保能完全显示图片
+            const cropAreaElement = this.cropPreviewImage.parentElement;
+            cropAreaElement.style.height = `${imgHeight}px`;
 
-        // 更新裁剪状态
-        this.cropState.cropX = cropX;
-        this.cropState.cropY = cropY;
-        this.cropState.cropWidth = cropWidth;
-        this.cropState.cropHeight = cropHeight;
-        this.cropState.imageWidth = imgWidth;
-        this.cropState.imageHeight = imgHeight;
+            // 初始化裁剪区域 - 使用更合理的默认尺寸
+            // 对于竖图，默认选择中间部分；对于横图，选择中心区域
+            let cropWidth, cropHeight, cropX, cropY;
 
-        // 绑定裁剪区域事件
-        this.bindCropEvents();
+            if (imgRatio < 1) {
+                // 竖图 - 选择中间部分，宽度为图片宽度，高度为图片高度的一半
+                cropWidth = imgWidth * 0.8;
+                cropHeight = Math.min(imgHeight * 0.6, 300);
+                cropX = (imgWidth - cropWidth) / 2;
+                cropY = (imgHeight - cropHeight) / 2;
+            } else {
+                // 横图 - 选择中心区域，宽高比接近书签比例
+                cropWidth = Math.min(imgWidth * 0.3, 200);
+                cropHeight = Math.min(imgHeight * 0.8, cropWidth * 3);
+                cropX = (imgWidth - cropWidth) / 2;
+                cropY = (imgHeight - cropHeight) / 2;
+            }
+
+            // 设置选区位置和大小
+            this.cropSelection.style.left = `${cropX}px`;
+            this.cropSelection.style.top = `${cropY}px`;
+            this.cropSelection.style.width = `${cropWidth}px`;
+            this.cropSelection.style.height = `${cropHeight}px`;
+
+            // 更新裁剪状态
+            this.cropState.cropX = cropX;
+            this.cropState.cropY = cropY;
+            this.cropState.cropWidth = cropWidth;
+            this.cropState.cropHeight = cropHeight;
+            this.cropState.imageWidth = imgWidth;
+            this.cropState.imageHeight = imgHeight;
+
+            // 绑定裁剪区域事件
+            this.bindCropEvents();
+        };
     }
 
     // 绑定裁剪区域事件
     bindCropEvents() {
         // 移除之前的事件监听器
-        this.cropSelection.removeEventListener('mousedown', this.cropMouseDownHandler);
-        document.removeEventListener('mousemove', this.cropMouseMoveHandler);
-        document.removeEventListener('mouseup', this.cropMouseUpHandler);
+        if (this.cropMouseDownHandler) {
+            this.cropSelection.removeEventListener('mousedown', this.cropMouseDownHandler);
+        }
+        if (this.cropMouseMoveHandler) {
+            document.removeEventListener('mousemove', this.cropMouseMoveHandler);
+        }
+        if (this.cropMouseUpHandler) {
+            document.removeEventListener('mouseup', this.cropMouseUpHandler);
+        }
 
         // 创建事件处理函数
         this.cropMouseDownHandler = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+
+            // 获取裁剪区域的位置
+            const rect = this.cropSelection.getBoundingClientRect();
 
             // 检查是否点击了调整大小的手柄
-            const rect = this.cropSelection.getBoundingClientRect();
             const isResizeHandle =
-                e.clientX > rect.right - 10 &&
-                e.clientX < rect.right + 10 &&
-                e.clientY > rect.bottom - 10 &&
-                e.clientY < rect.bottom + 10;
+                e.clientX > rect.right - 15 &&
+                e.clientX < rect.right + 5 &&
+                e.clientY > rect.bottom - 15 &&
+                e.clientY < rect.bottom + 5;
 
             if (isResizeHandle) {
                 this.cropState.resizing = true;
@@ -344,13 +376,21 @@ class BackgroundManager {
                 this.cropState.dragging = true;
             }
 
+            // 记录起始位置
             this.cropState.startX = e.clientX;
             this.cropState.startY = e.clientY;
+
+            // 防止事件冒泡
+            return false;
         };
 
         this.cropMouseMoveHandler = (e) => {
             if (!this.cropState.dragging && !this.cropState.resizing) return;
 
+            // 获取图片容器
+            const cropAreaElement = this.cropPreviewImage.parentElement;
+
+            // 计算移动距离，考虑滚动位置
             const dx = e.clientX - this.cropState.startX;
             const dy = e.clientY - this.cropState.startY;
 
@@ -363,11 +403,27 @@ class BackgroundManager {
                 newX = Math.max(0, Math.min(newX, this.cropState.imageWidth - this.cropState.cropWidth));
                 newY = Math.max(0, Math.min(newY, this.cropState.imageHeight - this.cropState.cropHeight));
 
+                // 更新裁剪区域位置
                 this.cropSelection.style.left = `${newX}px`;
                 this.cropSelection.style.top = `${newY}px`;
 
+                // 更新状态
                 this.cropState.cropX = newX;
                 this.cropState.cropY = newY;
+
+                // 确保选区在可视区域内 - 如果选区移出可视区域，自动滚动
+                const selectionRect = this.cropSelection.getBoundingClientRect();
+                const containerRect = cropAreaElement.getBoundingClientRect();
+
+                // 向下滚动
+                if (selectionRect.bottom > containerRect.bottom) {
+                    cropAreaElement.scrollTop += (selectionRect.bottom - containerRect.bottom + 10);
+                }
+
+                // 向上滚动
+                if (selectionRect.top < containerRect.top) {
+                    cropAreaElement.scrollTop -= (containerRect.top - selectionRect.top + 10);
+                }
             } else if (this.cropState.resizing) {
                 // 调整裁剪区域大小
                 let newWidth = this.cropState.cropWidth + dx;
@@ -377,18 +433,31 @@ class BackgroundManager {
                 newWidth = Math.max(20, Math.min(newWidth, this.cropState.imageWidth - this.cropState.cropX));
                 newHeight = Math.max(20, Math.min(newHeight, this.cropState.imageHeight - this.cropState.cropY));
 
+                // 更新裁剪区域大小
                 this.cropSelection.style.width = `${newWidth}px`;
                 this.cropSelection.style.height = `${newHeight}px`;
 
+                // 更新状态
                 this.cropState.cropWidth = newWidth;
                 this.cropState.cropHeight = newHeight;
+
+                // 如果调整大小导致选区超出可视区域，自动滚动
+                const selectionRect = this.cropSelection.getBoundingClientRect();
+                const containerRect = cropAreaElement.getBoundingClientRect();
+
+                // 向下滚动
+                if (selectionRect.bottom > containerRect.bottom) {
+                    cropAreaElement.scrollTop += (selectionRect.bottom - containerRect.bottom + 10);
+                }
             }
 
+            // 更新起始位置
             this.cropState.startX = e.clientX;
             this.cropState.startY = e.clientY;
         };
 
         this.cropMouseUpHandler = () => {
+            // 重置拖动状态
             this.cropState.dragging = false;
             this.cropState.resizing = false;
         };
@@ -444,6 +513,25 @@ class BackgroundManager {
         croppedImg.onload = () => {
             // 更新背景图层数据
             data.image = croppedImg;
+            // 保留原始图片，以便再次裁剪
+            data.originalImage = data.originalImage;
+            // 设置为不平铺模式，确保裁剪区域正确显示
+            data.imageRepeat = 'no-repeat';
+            // 设置适应方式为填满书签
+            data.imageFit = 'cover';
+            // 更新UI
+            this.imageRepeatSelect.value = 'no-repeat';
+            this.imageFitSelect.value = 'cover';
+            // 保存裁剪信息
+            data.cropInfo = {
+                x: cropX,
+                y: cropY,
+                width: cropWidth,
+                height: cropHeight,
+                originalWidth: originalWidth,
+                originalHeight: originalHeight
+            };
+
             this.backgroundLayer.setData(data);
 
             // 隐藏裁剪区域
@@ -465,6 +553,9 @@ class BackgroundManager {
 
         // 恢复原始图片
         data.image = data.originalImage;
+        // 清除裁剪信息
+        data.cropInfo = null;
+
         this.backgroundLayer.setData(data);
 
         // 隐藏裁剪区域
@@ -472,6 +563,17 @@ class BackgroundManager {
 
         // 重新渲染
         this.render();
+    }
+
+    // 重新打开裁剪区域
+    reopenCrop() {
+        if (!this.backgroundLayer) return;
+
+        const data = this.backgroundLayer.getData();
+        if (!data.originalImage) return;
+
+        // 显示裁剪区域
+        this.showImageCropArea(data.originalImage);
     }
 
     // 从图片提取颜色
@@ -640,6 +742,7 @@ class BackgroundManager {
 
         // 更新图片设置
         data.imageRepeat = this.imageRepeatSelect.value;
+        data.imageFit = this.imageFitSelect.value;
         data.imageOpacity = parseInt(this.imageOpacityInput.value);
 
         // 更新UI
@@ -741,8 +844,17 @@ class BackgroundManager {
             this.updateImageSettings();
         });
 
+        this.imageFitSelect.addEventListener('change', () => {
+            this.updateImageSettings();
+        });
+
         this.imageOpacityInput.addEventListener('input', () => {
             this.updateImageSettings();
+        });
+
+        // 重新裁剪按钮
+        this.reopenCropBtn.addEventListener('click', () => {
+            this.reopenCrop();
         });
 
         // 提取颜色按钮
