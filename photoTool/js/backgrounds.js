@@ -412,8 +412,7 @@ class BackgroundManager {
             const dx = e.clientX - this.cropState.startX;
             const dy = e.clientY - this.cropState.startY;
 
-            // 书签固定比例
-            const bookmarkRatio = 1/3; // 宽高比 = 200:600
+            // 书签固定比例常量在resizing部分使用
 
             if (this.cropState.dragging) {
                 // 移动裁剪区域
@@ -448,18 +447,31 @@ class BackgroundManager {
             } else if (this.cropState.resizing) {
                 // 调整裁剪区域大小，但保持固定比例
                 let newWidth = this.cropState.cropWidth + dx;
+                let newHeight = this.cropState.cropHeight + dy;
 
-                // 根据固定比例计算高度
-                let newHeight = newWidth / bookmarkRatio;
+                // 设置固定比例
+                const bookmarkRatio = 1/3; // 书签的宽高比
 
-                // 限制最小尺寸和最大尺寸
-                newWidth = Math.max(50, Math.min(newWidth, this.cropState.imageWidth - this.cropState.cropX));
-                newHeight = newWidth / bookmarkRatio; // 重新计算高度以保持比例
+                // 根据拖动方向决定是调整宽度还是高度
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // 主要是水平拖动，以宽度为基准
+                    newWidth = Math.max(50, Math.min(newWidth, this.cropState.imageWidth - this.cropState.cropX));
+                    newHeight = newWidth / bookmarkRatio; // 根据固定比例计算高度
+                } else {
+                    // 主要是垂直拖动，以高度为基准
+                    newHeight = Math.max(150, Math.min(newHeight, this.cropState.imageHeight - this.cropState.cropY));
+                    newWidth = newHeight * bookmarkRatio; // 根据固定比例计算宽度
+                }
 
-                // 确保高度不超出图片
+                // 确保不超出图片边界
+                if (this.cropState.cropX + newWidth > this.cropState.imageWidth) {
+                    newWidth = this.cropState.imageWidth - this.cropState.cropX;
+                    newHeight = newWidth / bookmarkRatio;
+                }
+
                 if (this.cropState.cropY + newHeight > this.cropState.imageHeight) {
                     newHeight = this.cropState.imageHeight - this.cropState.cropY;
-                    newWidth = newHeight * bookmarkRatio; // 调整宽度以保持比例
+                    newWidth = newHeight * bookmarkRatio;
                 }
 
                 // 更新裁剪区域大小
@@ -624,6 +636,12 @@ class BackgroundManager {
         const data = this.backgroundLayer.getData();
         if (!data.image) return;
 
+        // 保存当前图片和设置，以便提取颜色后恢复
+        const currentImage = data.image;
+        const currentImageRepeat = data.imageRepeat;
+        const currentImageFit = data.imageFit;
+        const currentCropInfo = data.cropInfo;
+
         // 创建Canvas来分析图片颜色
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -660,39 +678,36 @@ class BackgroundManager {
 
         // 创建渐变
         if (dominantColors.length >= 2) {
-            // 切换到渐变背景
-            this.setBackgroundType('gradient');
-
-            // 更新渐变设置
-            const gradientData = data.gradient;
-            gradientData.type = 'linear';
-            gradientData.angle = 45;
-
             // 转换颜色为十六进制
             const hexColors = [
                 this.rgbToHex(dominantColors[0]),
                 this.rgbToHex(dominantColors[1])
             ];
 
-            gradientData.stops = [
-                { color: hexColors[0], position: 0 },
-                { color: hexColors[1], position: 100 }
-            ];
+            // 将提取的颜色传递给Canvas管理器，用于背景板
+            if (canvasManager) {
+                canvasManager.setExtractedColors(hexColors);
+
+                // 立即应用到背景板
+                const boardElement = document.querySelector('.background-board');
+                const gradient = `linear-gradient(45deg, ${hexColors[0]}, ${hexColors[1]})`;
+                boardElement.style.background = gradient;
+            }
+
+            // 恢复图片和设置
+            data.image = currentImage;
+            data.imageRepeat = currentImageRepeat;
+            data.imageFit = currentImageFit;
+            data.cropInfo = currentCropInfo;
 
             // 更新背景图层数据
-            data.gradient = gradientData;
             this.backgroundLayer.setData(data);
-
-            // 更新UI
-            this.updateUI();
 
             // 重新渲染
             this.render();
 
-            // 将提取的颜色传递给Canvas管理器，用于背景板
-            if (canvasManager) {
-                canvasManager.setExtractedColors(hexColors);
-            }
+            // 显示提示
+            alert('已从图片提取颜色并应用到背景板');
         }
     }
 

@@ -145,9 +145,51 @@ class BookmarkCanvas {
         return this.canvas.toDataURL('image/png');
     }
 
-    // 导出为图片
+    // 导出为图片（包含背景板）
     exportImage() {
-        const dataURL = this.getDataURL();
+        // 创建一个新的Canvas来绘制完整的书签（包括背景板）
+        const exportCanvas = document.createElement('canvas');
+        const ctx = exportCanvas.getContext('2d');
+
+        // 获取背景板元素
+        const boardElement = document.querySelector('.background-board');
+        const boardStyle = getComputedStyle(boardElement);
+
+        // 设置导出Canvas的尺寸为背景板的尺寸
+        exportCanvas.width = parseInt(boardStyle.width);
+        exportCanvas.height = parseInt(boardStyle.height);
+
+        // 绘制背景板
+        if (boardStyle.background.includes('gradient')) {
+            // 如果背景是渐变
+            const gradient = ctx.createLinearGradient(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // 尝试从背景板样式中提取颜色
+            if (this.extractedColors && this.extractedColors.length >= 2) {
+                gradient.addColorStop(0, this.extractedColors[0]);
+                gradient.addColorStop(1, this.extractedColors[1]);
+                ctx.fillStyle = gradient;
+            } else {
+                // 默认渐变
+                ctx.fillStyle = boardStyle.backgroundColor || '#f5f5f5';
+            }
+        } else {
+            // 纯色背景
+            ctx.fillStyle = boardStyle.backgroundColor || '#f5f5f5';
+        }
+
+        // 填充背景
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+        // 计算书签在背景板中的位置（居中）
+        const bookmarkX = (exportCanvas.width - this.canvas.width) / 2;
+        const bookmarkY = (exportCanvas.height - this.canvas.height) / 2;
+
+        // 绘制书签
+        ctx.drawImage(this.canvas, bookmarkX, bookmarkY);
+
+        // 导出为图片
+        const dataURL = exportCanvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.download = '书签卡片.png';
         link.href = dataURL;
