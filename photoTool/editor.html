@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签卡片编辑器</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>书签卡片编辑器</h1>
+            <div class="header-actions">
+                <button id="exportBtn" class="btn primary">导出书签</button>
+                <button id="saveBtn" class="btn">保存设置</button>
+                <button id="loadBtn" class="btn">加载设置</button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="editor-panel">
+                <div class="canvas-container">
+                    <canvas id="bookmarkCanvas" width="200" height="600">
+                        您的浏览器不支持HTML5 Canvas元素
+                    </canvas>
+                    <div class="canvas-controls">
+                        <button id="zoomInBtn" class="btn small">+</button>
+                        <span id="zoomLevel">100%</span>
+                        <button id="zoomOutBtn" class="btn small">-</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="background">背景</button>
+                    <button class="tab-btn" data-tab="text">文字</button>
+                    <button class="tab-btn" data-tab="icon">图标</button>
+                    <button class="tab-btn" data-tab="template">模板</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- 背景设置面板 -->
+                    <div class="tab-pane active" id="background-tab">
+                        <h3>背景类型</h3>
+                        <div class="control-group">
+                            <label>
+                                <input type="radio" name="bgType" value="solid" checked>
+                                纯色背景
+                            </label>
+                            <label>
+                                <input type="radio" name="bgType" value="gradient">
+                                渐变背景
+                            </label>
+                            <label>
+                                <input type="radio" name="bgType" value="image">
+                                图片背景
+                            </label>
+                            <label>
+                                <input type="radio" name="bgType" value="pattern">
+                                几何图案
+                            </label>
+                        </div>
+
+                        <!-- 纯色背景设置 -->
+                        <div class="bg-settings" id="solid-settings">
+                            <div class="control-group">
+                                <label for="bgColor">背景颜色</label>
+                                <input type="color" id="bgColor" value="#8B0000">
+                            </div>
+                        </div>
+
+                        <!-- 渐变背景设置 -->
+                        <div class="bg-settings" id="gradient-settings" style="display: none;">
+                            <div class="control-group">
+                                <label for="gradientType">渐变类型</label>
+                                <select id="gradientType">
+                                    <option value="linear">线性渐变</option>
+                                    <option value="radial">径向渐变</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="gradientAngle">渐变角度</label>
+                                <input type="range" id="gradientAngle" min="0" max="360" value="45">
+                                <span id="gradientAngleValue">45°</span>
+                            </div>
+                            <div class="control-group">
+                                <label>渐变颜色</label>
+                                <div class="gradient-colors">
+                                    <div class="color-stop">
+                                        <input type="color" class="gradient-color" value="#FF0000">
+                                        <input type="range" class="gradient-position" min="0" max="100" value="0">
+                                        <span class="position-value">0%</span>
+                                    </div>
+                                    <div class="color-stop">
+                                        <input type="color" class="gradient-color" value="#0000FF">
+                                        <input type="range" class="gradient-position" min="0" max="100" value="100">
+                                        <span class="position-value">100%</span>
+                                    </div>
+                                </div>
+                                <button id="addColorStop" class="btn small">添加颜色</button>
+                            </div>
+                        </div>
+
+                        <!-- 图片背景设置 -->
+                        <div class="bg-settings" id="image-settings" style="display: none;">
+                            <div class="control-group">
+                                <label for="bgImage">选择图片</label>
+                                <input type="file" id="bgImage" accept="image/*">
+                            </div>
+                            <div class="control-group">
+                                <label for="imageRepeat">平铺方式</label>
+                                <select id="imageRepeat">
+                                    <option value="no-repeat">不平铺</option>
+                                    <option value="repeat" selected>平铺</option>
+                                    <option value="repeat-x">水平平铺</option>
+                                    <option value="repeat-y">垂直平铺</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="imageOpacity">不透明度</label>
+                                <input type="range" id="imageOpacity" min="0" max="100" value="100">
+                                <span id="imageOpacityValue">100%</span>
+                            </div>
+                        </div>
+
+                        <!-- 几何图案设置 -->
+                        <div class="bg-settings" id="pattern-settings" style="display: none;">
+                            <div class="control-group">
+                                <label for="patternType">图案类型</label>
+                                <select id="patternType">
+                                    <option value="stripes">斜条纹</option>
+                                    <option value="hexagons">六边形网格</option>
+                                    <option value="dots">圆点</option>
+                                    <option value="zigzag">锯齿形</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="patternColor1">主要颜色</label>
+                                <input type="color" id="patternColor1" value="#FFFFFF">
+                            </div>
+                            <div class="control-group">
+                                <label for="patternColor2">次要颜色</label>
+                                <input type="color" id="patternColor2" value="#000000">
+                            </div>
+                            <div class="control-group">
+                                <label for="patternSize">图案大小</label>
+                                <input type="range" id="patternSize" min="5" max="50" value="20">
+                                <span id="patternSizeValue">20px</span>
+                            </div>
+                            <div class="control-group">
+                                <label for="patternAngle">图案角度</label>
+                                <input type="range" id="patternAngle" min="0" max="360" value="45">
+                                <span id="patternAngleValue">45°</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 文字设置面板 -->
+                    <div class="tab-pane" id="text-tab" style="display: none;">
+                        <h3>文字内容</h3>
+                        <div class="control-group">
+                            <label for="textContent">文字内容</label>
+                            <textarea id="textContent" rows="4" placeholder="输入文字内容...">书签示例文字</textarea>
+                        </div>
+                        <div class="control-group">
+                            <label for="textDirection">排列方向</label>
+                            <select id="textDirection">
+                                <option value="vertical" selected>竖排</option>
+                                <option value="horizontal">横排</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="textFont">字体</label>
+                            <select id="textFont">
+                                <option value="SimSun">宋体</option>
+                                <option value="KaiTi">楷体</option>
+                                <option value="Microsoft YaHei">微软雅黑</option>
+                                <option value="Arial">Arial</option>
+                                <option value="custom">自定义字体</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="textSize">字体大小</label>
+                            <input type="range" id="textSize" min="12" max="72" value="24">
+                            <span id="textSizeValue">24px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="textColor">字体颜色</label>
+                            <input type="color" id="textColor" value="#FFFFFF">
+                        </div>
+                        <div class="control-group">
+                            <label for="textX">X位置</label>
+                            <input type="range" id="textX" min="0" max="200" value="100">
+                            <span id="textXValue">100px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="textY">Y位置</label>
+                            <input type="range" id="textY" min="0" max="600" value="100">
+                            <span id="textYValue">100px</span>
+                        </div>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="textShadow">
+                                文字阴影
+                            </label>
+                        </div>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="textOutline">
+                                文字描边
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 图标设置面板 -->
+                    <div class="tab-pane" id="icon-tab" style="display: none;">
+                        <h3>图标设置</h3>
+                        <div class="control-group">
+                            <label for="iconFile">上传图标</label>
+                            <input type="file" id="iconFile" accept="image/*">
+                        </div>
+                        <div class="control-group">
+                            <label>预设图标</label>
+                            <div class="icon-grid">
+                                <div class="icon-item" data-icon="icon1">
+                                    <img src="assets/icons/icon1.svg" alt="图标1">
+                                </div>
+                                <div class="icon-item" data-icon="icon2">
+                                    <img src="assets/icons/icon2.svg" alt="图标2">
+                                </div>
+                                <div class="icon-item" data-icon="icon3">
+                                    <img src="assets/icons/icon3.svg" alt="图标3">
+                                </div>
+                                <div class="icon-item" data-icon="icon4">
+                                    <img src="assets/icons/icon4.svg" alt="图标4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="iconSize">图标大小</label>
+                            <input type="range" id="iconSize" min="10" max="100" value="40">
+                            <span id="iconSizeValue">40px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="iconX">X位置</label>
+                            <input type="range" id="iconX" min="0" max="200" value="100">
+                            <span id="iconXValue">100px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="iconY">Y位置</label>
+                            <input type="range" id="iconY" min="0" max="600" value="300">
+                            <span id="iconYValue">300px</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="iconRotation">旋转角度</label>
+                            <input type="range" id="iconRotation" min="0" max="360" value="0">
+                            <span id="iconRotationValue">0°</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="iconOpacity">不透明度</label>
+                            <input type="range" id="iconOpacity" min="0" max="100" value="100">
+                            <span id="iconOpacityValue">100%</span>
+                        </div>
+                    </div>
+
+                    <!-- 模板设置面板 -->
+                    <div class="tab-pane" id="template-tab" style="display: none;">
+                        <h3>书签模板</h3>
+                        <div class="template-grid">
+                            <div class="template-item" data-template="template1">
+                                <div class="template-preview" style="background-color: #8B0000;"></div>
+                                <span>红色简约</span>
+                            </div>
+                            <div class="template-item" data-template="template2">
+                                <div class="template-preview" style="background: linear-gradient(45deg, #ff9a9e, #fad0c4);"></div>
+                                <span>粉色渐变</span>
+                            </div>
+                            <div class="template-item" data-template="template3">
+                                <div class="template-preview" style="background: url('assets/textures/waves.jpg');"></div>
+                                <span>海浪纹理</span>
+                            </div>
+                            <div class="template-item" data-template="template4">
+                                <div class="template-preview" style="background: repeating-linear-gradient(45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px);"></div>
+                                <span>斜条纹</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript 文件 -->
+    <script src="js/canvas.js"></script>
+    <script src="js/layers.js"></script>
+    <script src="js/backgrounds.js"></script>
+    <script src="js/text.js"></script>
+    <script src="js/icons.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
