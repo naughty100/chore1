@@ -313,6 +313,9 @@ class TextLayer extends Layer {
             shadow: false,
             outline: false
         };
+
+        // 默认隐藏文字
+        this.visible = false;
     }
 
     // 渲染文字

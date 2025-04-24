@@ -38,6 +38,39 @@
                         <input type="color" id="boardColor" value="#F5F5F5">
                     </div>
                     <div class="control-group">
+                        <label for="boardGradientType">渐变类型</label>
+                        <select id="boardGradientType">
+                            <option value="none">无渐变</option>
+                            <option value="linear" selected>线性渐变</option>
+                            <option value="radial">径向渐变</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="boardGradientAngle">渐变角度</label>
+                        <input type="range" id="boardGradientAngle" min="0" max="360" value="45">
+                        <span id="boardGradientAngleValue">45°</span>
+                    </div>
+                    <div class="control-group gradient-positions">
+                        <label>渐变位置</label>
+                        <div class="position-controls">
+                            <div class="position-control">
+                                <span class="color-preview" style="background-color: #FF0000;"></span>
+                                <input type="range" id="gradientPos1" min="0" max="100" value="0">
+                                <span id="gradientPos1Value">0%</span>
+                            </div>
+                            <div class="position-control">
+                                <span class="color-preview" style="background-color: #00FF00;"></span>
+                                <input type="range" id="gradientPos2" min="0" max="100" value="50">
+                                <span id="gradientPos2Value">50%</span>
+                            </div>
+                            <div class="position-control">
+                                <span class="color-preview" style="background-color: #0000FF;"></span>
+                                <input type="range" id="gradientPos3" min="0" max="100" value="100">
+                                <span id="gradientPos3Value">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
                         <button id="applyExtractedColors" class="btn small" style="display: none;">应用提取的颜色到背景板</button>
                     </div>
                     <div class="control-group">

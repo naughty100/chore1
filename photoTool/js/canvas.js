@@ -20,8 +20,25 @@ class BookmarkCanvas {
         // 背景板设置
         this.boardColor = '#F5F5F5';
         this.boardColorInput = document.getElementById('boardColor');
+        this.boardGradientType = document.getElementById('boardGradientType');
+        this.boardGradientAngle = document.getElementById('boardGradientAngle');
+        this.boardGradientAngleValue = document.getElementById('boardGradientAngleValue');
+
+        // 渐变位置控制
+        this.gradientPos1 = document.getElementById('gradientPos1');
+        this.gradientPos1Value = document.getElementById('gradientPos1Value');
+        this.gradientPos2 = document.getElementById('gradientPos2');
+        this.gradientPos2Value = document.getElementById('gradientPos2Value');
+        this.gradientPos3 = document.getElementById('gradientPos3');
+        this.gradientPos3Value = document.getElementById('gradientPos3Value');
+
         this.applyExtractedColorsBtn = document.getElementById('applyExtractedColors');
         this.extractedColors = null;
+        this.gradientType = 'linear';
+        this.gradientAngle = 45;
+
+        // 渐变位置
+        this.gradientPositions = [0, 50, 100];
 
         // 初始化Canvas
         this.initCanvas();
@@ -96,13 +113,54 @@ class BookmarkCanvas {
             this.updateBackgroundBoard();
         });
 
+        // 渐变类型事件
+        this.boardGradientType.addEventListener('change', (e) => {
+            this.gradientType = e.target.value;
+
+            // 更新UI
+            if (this.gradientType === 'none') {
+                document.getElementById('boardGradientAngle').parentElement.style.display = 'none';
+            } else {
+                document.getElementById('boardGradientAngle').parentElement.style.display = 'block';
+            }
+
+            this.updateBackgroundBoard();
+        });
+
+        // 渐变角度事件
+        this.boardGradientAngle.addEventListener('input', (e) => {
+            this.gradientAngle = parseInt(e.target.value);
+            this.boardGradientAngleValue.textContent = `${this.gradientAngle}°`;
+            this.updateBackgroundBoard();
+        });
+
+        // 渐变位置事件
+        this.gradientPos1.addEventListener('input', (e) => {
+            this.gradientPositions[0] = parseInt(e.target.value);
+            this.gradientPos1Value.textContent = `${this.gradientPositions[0]}%`;
+            this.updateGradientPreview();
+            this.updateBackgroundBoard();
+        });
+
+        this.gradientPos2.addEventListener('input', (e) => {
+            this.gradientPositions[1] = parseInt(e.target.value);
+            this.gradientPos2Value.textContent = `${this.gradientPositions[1]}%`;
+            this.updateGradientPreview();
+            this.updateBackgroundBoard();
+        });
+
+        this.gradientPos3.addEventListener('input', (e) => {
+            this.gradientPositions[2] = parseInt(e.target.value);
+            this.gradientPos3Value.textContent = `${this.gradientPositions[2]}%`;
+            this.updateGradientPreview();
+            this.updateBackgroundBoard();
+        });
+
         // 应用提取的颜色到背景板
         this.applyExtractedColorsBtn.addEventListener('click', () => {
             if (this.extractedColors && this.extractedColors.length >= 2) {
-                // 创建渐变背景
-                const boardElement = document.querySelector('.background-board');
-                const gradient = `linear-gradient(45deg, ${this.extractedColors[0]}, ${this.extractedColors[1]})`;
-                boardElement.style.background = gradient;
+                // 更新背景板
+                this.updateBackgroundBoard();
 
                 // 隐藏按钮
                 this.applyExtractedColorsBtn.style.display = 'none';
@@ -110,10 +168,40 @@ class BookmarkCanvas {
         });
     }
 
-    // 更新背景板颜色
+    // 更新背景板颜色和渐变
     updateBackgroundBoard() {
         const boardElement = document.querySelector('.background-board');
-        boardElement.style.backgroundColor = this.boardColor;
+
+        if (this.gradientType === 'none') {
+            // 纯色背景
+            boardElement.style.background = this.boardColor;
+        } else if (this.extractedColors && this.extractedColors.length >= 3) {
+            // 使用提取的颜色创建渐变
+            if (this.gradientType === 'linear') {
+                // 线性渐变 - 使用自定义位置
+                const pos1 = this.gradientPositions[0];
+                const pos2 = this.gradientPositions[1];
+                const pos3 = this.gradientPositions[2];
+
+                boardElement.style.background = `linear-gradient(${this.gradientAngle}deg,
+                    ${this.extractedColors[0]} ${pos1}%,
+                    ${this.extractedColors[1]} ${pos2}%,
+                    ${this.extractedColors[2]} ${pos3}%)`;
+            } else {
+                // 径向渐变 - 使用自定义位置
+                const pos1 = this.gradientPositions[0];
+                const pos2 = this.gradientPositions[1];
+                const pos3 = this.gradientPositions[2];
+
+                boardElement.style.background = `radial-gradient(circle,
+                    ${this.extractedColors[0]} ${pos1}%,
+                    ${this.extractedColors[1]} ${pos2}%,
+                    ${this.extractedColors[2]} ${pos3}%)`;
+            }
+        } else {
+            // 默认背景色
+            boardElement.style.background = this.boardColor;
+        }
     }
 
     // 设置提取的颜色
@@ -121,6 +209,20 @@ class BookmarkCanvas {
         this.extractedColors = colors;
         if (colors && colors.length >= 2) {
             this.applyExtractedColorsBtn.style.display = 'block';
+            this.updateGradientPreview();
+        }
+    }
+
+    // 更新渐变预览
+    updateGradientPreview() {
+        if (!this.extractedColors || this.extractedColors.length < 3) return;
+
+        // 更新颜色预览
+        const colorPreviews = document.querySelectorAll('.color-preview');
+        if (colorPreviews.length >= 3) {
+            colorPreviews[0].style.backgroundColor = this.extractedColors[0];
+            colorPreviews[1].style.backgroundColor = this.extractedColors[1];
+            colorPreviews[2].style.backgroundColor = this.extractedColors[2];
         }
     }
 
@@ -160,30 +262,76 @@ class BookmarkCanvas {
         exportCanvas.height = parseInt(boardStyle.height);
 
         // 绘制背景板
-        if (boardStyle.background.includes('gradient')) {
-            // 如果背景是渐变
-            const gradient = ctx.createLinearGradient(0, 0, exportCanvas.width, exportCanvas.height);
+        if (this.gradientType === 'none') {
+            // 纯色背景
+            ctx.fillStyle = this.boardColor;
+        } else if (this.extractedColors && this.extractedColors.length >= 3) {
+            // 使用提取的颜色创建渐变
+            if (this.gradientType === 'linear') {
+                // 线性渐变 - 使用指定角度
+                const angleRad = this.gradientAngle * Math.PI / 180;
+                const gradientSize = Math.max(exportCanvas.width, exportCanvas.height);
 
-            // 尝试从背景板样式中提取颜色
-            if (this.extractedColors && this.extractedColors.length >= 2) {
-                gradient.addColorStop(0, this.extractedColors[0]);
-                gradient.addColorStop(1, this.extractedColors[1]);
+                // 计算渐变起点和终点
+                const centerX = exportCanvas.width / 2;
+                const centerY = exportCanvas.height / 2;
+                const startX = centerX - Math.cos(angleRad) * gradientSize / 2;
+                const startY = centerY - Math.sin(angleRad) * gradientSize / 2;
+                const endX = centerX + Math.cos(angleRad) * gradientSize / 2;
+                const endY = centerY + Math.sin(angleRad) * gradientSize / 2;
+
+                const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+
+                // 使用自定义位置
+                const pos1 = this.gradientPositions[0] / 100;
+                const pos2 = this.gradientPositions[1] / 100;
+                const pos3 = this.gradientPositions[2] / 100;
+
+                gradient.addColorStop(pos1, this.extractedColors[0]);
+                gradient.addColorStop(pos2, this.extractedColors[1]);
+                gradient.addColorStop(pos3, this.extractedColors[2]);
                 ctx.fillStyle = gradient;
             } else {
-                // 默认渐变
-                ctx.fillStyle = boardStyle.backgroundColor || '#f5f5f5';
+                // 径向渐变
+                const gradient = ctx.createRadialGradient(
+                    exportCanvas.width / 2, exportCanvas.height / 2, 0,
+                    exportCanvas.width / 2, exportCanvas.height / 2, exportCanvas.width / 2
+                );
+
+                // 使用自定义位置
+                const pos1 = this.gradientPositions[0] / 100;
+                const pos2 = this.gradientPositions[1] / 100;
+                const pos3 = this.gradientPositions[2] / 100;
+
+                gradient.addColorStop(pos1, this.extractedColors[0]);
+                gradient.addColorStop(pos2, this.extractedColors[1]);
+                gradient.addColorStop(pos3, this.extractedColors[2]);
+                ctx.fillStyle = gradient;
             }
         } else {
-            // 纯色背景
-            ctx.fillStyle = boardStyle.backgroundColor || '#f5f5f5';
+            // 默认背景色
+            ctx.fillStyle = this.boardColor;
         }
 
         // 填充背景
         ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-        // 计算书签在背景板中的位置（居中）
+        // 计算书签在背景板中的位置（水平居中，垂直有上下边距）
         const bookmarkX = (exportCanvas.width - this.canvas.width) / 2;
-        const bookmarkY = (exportCanvas.height - this.canvas.height) / 2;
+
+        // 添加上下边距，使书签在背景板中垂直居中，但留有一定边距
+        const verticalMargin = exportCanvas.height * 0.15; // 上下边距各为背景板高度的15%
+        const availableHeight = exportCanvas.height - (verticalMargin * 2); // 可用高度
+
+        // 计算书签Y位置
+        let bookmarkY;
+
+        // 如果书签高度小于可用高度，则居中放置；否则，使用固定边距
+        if (this.canvas.height <= availableHeight) {
+            bookmarkY = (exportCanvas.height - this.canvas.height) / 2; // 垂直居中
+        } else {
+            bookmarkY = verticalMargin; // 使用固定上边距
+        }
 
         // 绘制书签
         ctx.drawImage(this.canvas, bookmarkX, bookmarkY);

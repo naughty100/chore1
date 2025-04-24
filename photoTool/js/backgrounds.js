@@ -673,15 +673,16 @@ class BackgroundManager {
             colorSamples.push({ r, g, b });
         }
 
-        // 使用K-means聚类算法找出主要颜色
-        const dominantColors = this.findDominantColors(colorSamples, 2);
+        // 使用K-means聚类算法找出主要颜色（提取3种颜色）
+        const dominantColors = this.findDominantColors(colorSamples, 3);
 
         // 创建渐变
-        if (dominantColors.length >= 2) {
+        if (dominantColors.length >= 3) {
             // 转换颜色为十六进制
             const hexColors = [
                 this.rgbToHex(dominantColors[0]),
-                this.rgbToHex(dominantColors[1])
+                this.rgbToHex(dominantColors[1]),
+                this.rgbToHex(dominantColors[2])
             ];
 
             // 将提取的颜色传递给Canvas管理器，用于背景板
@@ -690,7 +691,8 @@ class BackgroundManager {
 
                 // 立即应用到背景板
                 const boardElement = document.querySelector('.background-board');
-                const gradient = `linear-gradient(45deg, ${hexColors[0]}, ${hexColors[1]})`;
+                // 创建一个三色渐变
+                const gradient = `linear-gradient(45deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
                 boardElement.style.background = gradient;
             }
 
