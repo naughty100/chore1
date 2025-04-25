@@ -702,9 +702,20 @@ class BackgroundManager {
 
                 // 立即应用到背景板
                 const boardElement = document.querySelector('.background-board');
-                // 创建一个三色渐变
-                const gradient = `linear-gradient(45deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
+                // 获取当前渐变角度
+                const gradientAngle = data.gradient.angle || 45;
+
+                // 创建一个三色渐变，使用当前设置的角度
+                const gradient = `linear-gradient(${gradientAngle}deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
                 boardElement.style.background = gradient;
+
+                // 更新渐变数据
+                data.gradient.type = 'linear';
+                data.gradient.stops = [
+                    { color: hexColors[0], position: 0 },
+                    { color: hexColors[1], position: 50 },
+                    { color: hexColors[2], position: 100 }
+                ];
             }
 
             // 恢复图片和设置
@@ -719,8 +730,8 @@ class BackgroundManager {
             // 重新渲染
             this.render();
 
-            // 显示提示
-            alert('已从图片提取颜色并应用到背景板');
+            // 显示日志
+            console.log('已从图片提取颜色并应用到背景板');
         }
     }
 

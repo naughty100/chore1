@@ -696,19 +696,17 @@ class BookmarkCanvas {
                 // 线性渐变 - 使用指定角度
                 // 注意：这里需要使用正确的角度值
                 const angleRad = this.gradientAngle * Math.PI / 180;
-                const gradientSize = Math.max(boardWidth, boardHeight) * 1.5; // 增大渐变范围确保覆盖整个背景
 
+                // 使用与layers.js中完全相同的计算方式
                 // 计算渐变起点和终点
-                const centerX = boardWidth / 2;
-                const centerY = boardHeight / 2;
-                const startX = centerX - Math.cos(angleRad) * gradientSize / 2;
-                const startY = centerY - Math.sin(angleRad) * gradientSize / 2;
-                const endX = centerX + Math.cos(angleRad) * gradientSize / 2;
-                const endY = centerY + Math.sin(angleRad) * gradientSize / 2;
+                const x0 = boardWidth / 2 - Math.cos(angleRad) * boardWidth / 2;
+                const y0 = boardHeight / 2 - Math.sin(angleRad) * boardHeight / 2;
+                const x1 = boardWidth / 2 + Math.cos(angleRad) * boardWidth / 2;
+                const y1 = boardHeight / 2 + Math.sin(angleRad) * boardHeight / 2;
 
-                console.log(`渐变角度: ${this.gradientAngle}°, 起点: (${startX}, ${startY}), 终点: (${endX}, ${endY})`);
+                console.log(`渐变角度: ${this.gradientAngle}°, 起点: (${x0}, ${y0}), 终点: (${x1}, ${y1})`);
 
-                const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+                const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
 
                 // 使用自定义位置
                 const pos1 = this.gradientPositions[0] / 100;
