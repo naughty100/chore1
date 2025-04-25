@@ -70,4 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
             bookmarkManager.updateLayout();
         });
     }
+
+    // 确保书签管理器初始化完成后更新UI
+    if (bookmarkManager) {
+        // 初始化书签列表
+        bookmarkManager.updateBookmarkList();
+
+        // 选择第一个书签
+        bookmarkManager.selectBookmark(0);
+    }
 });

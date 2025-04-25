@@ -204,6 +204,16 @@ canvas {
     font-weight: bold;
 }
 
+.bookmark-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.bookmark-actions .btn {
+    flex: 1;
+}
+
 /* 背景板尺寸控制样式 */
 .board-size {
     display: flex;
