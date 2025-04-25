@@ -314,12 +314,12 @@ class BackgroundManager {
             // 根据图片尺寸决定选区大小
             if (imgWidth < imgHeight) {
                 // 竖图 - 选区宽度为图片宽度的60%
-                cropWidth = imgWidth * 0.6;
+                cropWidth = imgWidth * 1;
                 cropHeight = cropWidth / bookmarkRatio; // 保持书签比例
 
                 // 如果计算出的高度超过图片高度，则调整
-                if (cropHeight > imgHeight * 0.9) {
-                    cropHeight = imgHeight * 0.9;
+                if (cropHeight > imgHeight * 1) {
+                    cropHeight = imgHeight * 1;
                     cropWidth = cropHeight * bookmarkRatio;
                 }
             } else {

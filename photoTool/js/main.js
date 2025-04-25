@@ -45,6 +45,7 @@ class BookmarkEditor {
         // 导出按钮事件
         if (this.exportBtn) {
             this.exportBtn.addEventListener('click', () => {
+                console.log('导出书签');
                 if (canvasManager) {
                     canvasManager.exportImage();
                 }
