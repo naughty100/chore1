@@ -35,163 +35,14 @@
             <!-- 右侧控制面板 -->
             <div class="controls-panel">
                 <div class="tabs">
-                    <button class="tab-btn active" data-tab="background">背景</button>
+                    <button class="tab-btn active" data-tab="bookmarks">书签</button>
                     <button class="tab-btn" data-tab="board">背景板</button>
-                    <button class="tab-btn" data-tab="bookmarks">书签</button>
-                    <button class="tab-btn" data-tab="position">位置</button>
                     <button class="tab-btn" data-tab="shadow">阴影</button>
+                    <button class="tab-btn" data-tab="position">位置</button>
                 </div>
 
                 <div class="tab-content">
-                    <!-- 背景设置面板 -->
-                    <div class="tab-pane active" id="background-tab">
-                        <h3>背景类型</h3>
-                        <div class="control-group">
-                            <label>
-                                <input type="radio" name="bgType" value="solid" checked>
-                                纯色背景
-                            </label>
-                            <label>
-                                <input type="radio" name="bgType" value="gradient">
-                                渐变背景
-                            </label>
-                            <label>
-                                <input type="radio" name="bgType" value="image">
-                                图片背景
-                            </label>
-                            <label>
-                                <input type="radio" name="bgType" value="pattern">
-                                几何图案
-                            </label>
-                        </div>
 
-                        <!-- 纯色背景设置 -->
-                        <div class="bg-settings" id="solid-settings">
-                            <div class="control-group">
-                                <label for="bgColor">背景颜色</label>
-                                <input type="color" id="bgColor" value="#8B0000">
-                            </div>
-                        </div>
-
-                        <!-- 渐变背景设置 -->
-                        <div class="bg-settings" id="gradient-settings" style="display: none;">
-                            <div class="control-group">
-                                <label for="gradientType">渐变类型</label>
-                                <select id="gradientType">
-                                    <option value="linear">线性渐变</option>
-                                    <option value="radial">径向渐变</option>
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label for="gradientAngle">渐变角度</label>
-                                <input type="range" id="gradientAngle" min="0" max="360" value="45">
-                                <span id="gradientAngleValue">45°</span>
-                            </div>
-                            <div class="control-group">
-                                <label>渐变颜色</label>
-                                <div class="gradient-colors">
-                                    <div class="color-stop">
-                                        <input type="color" class="gradient-color" value="#FF0000">
-                                        <input type="range" class="gradient-position" min="0" max="100" value="0">
-                                        <span class="position-value">0%</span>
-                                    </div>
-                                    <div class="color-stop">
-                                        <input type="color" class="gradient-color" value="#0000FF">
-                                        <input type="range" class="gradient-position" min="0" max="100" value="100">
-                                        <span class="position-value">100%</span>
-                                    </div>
-                                </div>
-                                <button id="addColorStop" class="btn small">添加颜色</button>
-                            </div>
-                        </div>
-
-                        <!-- 图片背景设置 -->
-                        <div class="bg-settings" id="image-settings" style="display: none;">
-                            <div class="control-group">
-                                <label for="bgImage">选择图片</label>
-                                <input type="file" id="bgImage" accept="image/*">
-                            </div>
-
-                            <!-- 图片区域选择 -->
-                            <div class="control-group" id="imageCropContainer" style="display: none;">
-                                <label>选择区域</label>
-                                <div class="image-crop-wrapper">
-                                    <div class="image-crop-area">
-                                        <img id="cropPreviewImage" src="" alt="预览图">
-                                        <div id="cropSelection" class="crop-selection"></div>
-                                    </div>
-                                </div>
-                                <div class="crop-controls">
-                                    <button id="applyCropBtn" class="btn small">应用选区</button>
-                                    <button id="resetCropBtn" class="btn small">重置选区</button>
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <button id="reopenCropBtn" class="btn small">重新裁剪图片</button>
-                            </div>
-
-                            <div class="control-group">
-                                <label for="imageRepeat">平铺方式</label>
-                                <select id="imageRepeat">
-                                    <option value="no-repeat">不平铺</option>
-                                    <option value="repeat" selected>平铺</option>
-                                    <option value="repeat-x">水平平铺</option>
-                                    <option value="repeat-y">垂直平铺</option>
-                                </select>
-                            </div>
-
-                            <div class="control-group">
-                                <label for="imageFit">适应方式</label>
-                                <select id="imageFit">
-                                    <option value="contain">包含全图</option>
-                                    <option value="cover" selected>填满书签</option>
-                                    <option value="center">居中显示</option>
-                                </select>
-                            </div>
-
-                            <div class="control-group">
-                                <label for="imageOpacity">不透明度</label>
-                                <input type="range" id="imageOpacity" min="0" max="100" value="100">
-                                <span id="imageOpacityValue">100%</span>
-                            </div>
-
-                            <div class="control-group">
-                                <button id="extractColorsBtn" class="btn">从图片提取颜色到背景板</button>
-                            </div>
-                        </div>
-
-                        <!-- 几何图案设置 -->
-                        <div class="bg-settings" id="pattern-settings" style="display: none;">
-                            <div class="control-group">
-                                <label for="patternType">图案类型</label>
-                                <select id="patternType">
-                                    <option value="stripes">斜条纹</option>
-                                    <option value="hexagons">六边形网格</option>
-                                    <option value="dots">圆点</option>
-                                    <option value="zigzag">锯齿形</option>
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label for="patternColor1">主要颜色</label>
-                                <input type="color" id="patternColor1" value="#FFFFFF">
-                            </div>
-                            <div class="control-group">
-                                <label for="patternColor2">次要颜色</label>
-                                <input type="color" id="patternColor2" value="#000000">
-                            </div>
-                            <div class="control-group">
-                                <label for="patternSize">图案大小</label>
-                                <input type="range" id="patternSize" min="5" max="50" value="20">
-                                <span id="patternSizeValue">20px</span>
-                            </div>
-                            <div class="control-group">
-                                <label for="patternAngle">图案角度</label>
-                                <input type="range" id="patternAngle" min="0" max="360" value="45">
-                                <span id="patternAngleValue">45°</span>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- 背景板设置面板 -->
                     <div class="tab-pane" id="board-tab" style="display: none;">
@@ -270,7 +121,7 @@
                     </div>
 
                     <!-- 书签管理面板 -->
-                    <div class="tab-pane" id="bookmarks-tab" style="display: none;">
+                    <div class="tab-pane active" id="bookmarks-tab">
                         <h3>书签管理</h3>
                         <div class="control-group bookmark-actions">
                             <button id="addBookmarkBtn" class="btn small">添加书签</button>
@@ -316,6 +167,72 @@
 
                         <div class="control-group">
                             <p class="hint">提示：点击书签列表项可以选择编辑对应的书签</p>
+                        </div>
+
+                        <!-- 书签缩放设置 -->
+                        <div class="control-group">
+                            <label for="bookmarkScale">书签缩放</label>
+                            <input type="range" id="bookmarkScale" min="50" max="150" value="100">
+                            <span id="bookmarkScaleValue">100%</span>
+                        </div>
+
+                        <!-- 书签背景设置 -->
+                        <div class="bookmark-background-settings">
+                            <h3>书签背景</h3>
+
+                            <!-- 图片背景设置 -->
+                            <div class="control-group">
+                                <label for="bgImage">选择背景图片</label>
+                                <input type="file" id="bgImage" accept="image/*">
+                            </div>
+
+                            <!-- 图片区域选择 -->
+                            <div class="control-group" id="imageCropContainer" style="display: none;">
+                                <label>选择区域</label>
+                                <div class="image-crop-wrapper">
+                                    <div class="image-crop-area">
+                                        <img id="cropPreviewImage" src="" alt="预览图">
+                                        <div id="cropSelection" class="crop-selection"></div>
+                                    </div>
+                                </div>
+                                <div class="crop-controls">
+                                    <button id="applyCropBtn" class="btn small">应用选区</button>
+                                    <button id="resetCropBtn" class="btn small">重置选区</button>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <button id="reopenCropBtn" class="btn small" style="display: none;">重新裁剪图片</button>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="imageRepeat">平铺方式</label>
+                                <select id="imageRepeat">
+                                    <option value="no-repeat" selected>不平铺</option>
+                                    <option value="repeat">平铺</option>
+                                    <option value="repeat-x">水平平铺</option>
+                                    <option value="repeat-y">垂直平铺</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="imageFit">适应方式</label>
+                                <select id="imageFit">
+                                    <option value="contain">包含全图</option>
+                                    <option value="cover" selected>填满书签</option>
+                                    <option value="center">居中显示</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="imageOpacity">不透明度</label>
+                                <input type="range" id="imageOpacity" min="0" max="100" value="100">
+                                <span id="imageOpacityValue">100%</span>
+                            </div>
+
+                            <div class="control-group">
+                                <button id="extractColorsBtn" class="btn">从图片提取颜色到背景板</button>
+                            </div>
                         </div>
                     </div>
 

@@ -214,6 +214,63 @@ canvas {
     flex: 1;
 }
 
+.bookmark-background-settings {
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.bookmark-background-settings h3 {
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #333;
+}
+
+/* 图片裁剪区域样式 */
+.image-crop-wrapper {
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.image-crop-area {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.image-crop-area img {
+    display: block;
+    max-width: 100%;
+}
+
+.crop-selection {
+    position: absolute;
+    border: 2px dashed #4a90e2;
+    background-color: rgba(74, 144, 226, 0.1);
+    cursor: move;
+}
+
+.crop-selection::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 10px;
+    height: 10px;
+    background-color: #4a90e2;
+    border-radius: 50%;
+    cursor: nwse-resize;
+}
+
+.crop-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
 /* 背景板尺寸控制样式 */
 .board-size {
     display: flex;

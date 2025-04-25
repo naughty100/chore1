@@ -16,7 +16,7 @@ class BookmarkCanvas {
         this.standardHeight = 600;
 
         // 获取设备像素比
-        this.dpr = 3 || window.devicePixelRatio ;
+        this.dpr = window.devicePixelRatio || 1;
 
         // 缩放比例
         this.scale = 1;
@@ -672,13 +672,32 @@ class BookmarkCanvas {
         // 清除Canvas
         this.clear();
 
-        // 渲染各个图层
-        if (layerManager) {
-            layerManager.renderLayers(this.ctx);
-        }
+        // 如果存在书签管理器，渲染当前选中的书签
+        if (bookmarkManager) {
+            const selectedBookmark = bookmarkManager.getSelectedBookmark();
+            if (selectedBookmark) {
+                // 获取书签在背景板中的位置
+                const boardWidth = this.width;
+                const boardHeight = this.height;
+                const { x, y } = selectedBookmark.calculatePosition(boardWidth, boardHeight);
 
-        // 注意：边框功能已移除
-        // 在简化版本中不再需要渲染边框
+                // 获取缩放后的尺寸
+                const { width, height } = selectedBookmark.getScaledDimensions();
+
+                // 绘制选中书签的内容到主Canvas
+                this.ctx.drawImage(selectedBookmark.canvas, x, y, width, height);
+            } else {
+                // 如果没有选中书签，渲染默认图层
+                if (layerManager) {
+                    layerManager.renderLayers(this.ctx);
+                }
+            }
+        } else {
+            // 兼容旧版本，渲染图层
+            if (layerManager) {
+                layerManager.renderLayers(this.ctx);
+            }
+        }
     }
 
     // 更新书签UI
@@ -691,8 +710,15 @@ class BookmarkCanvas {
 
         // 更新缩放UI
         this.currentScale = bookmark.scale;
-        this.bookmarkScale.value = this.currentScale;
-        this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+
+        // 重新渲染Canvas
+        this.render();
+    }
+
+    // 更新书签位置
+    updateBookmarkPosition() {
+        // 重新渲染Canvas
+        this.render();
     }
 
     // 获取Canvas数据URL

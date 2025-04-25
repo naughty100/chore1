@@ -17,6 +17,17 @@ class Bookmark {
             yUnit: 'percent', // 'percent' 或 'px'
             preset: 'center' // 预设位置
         };
+
+        // 背景图片设置
+        this.background = {
+            image: null,           // 背景图片对象
+            originalImage: null,   // 原始图片（用于裁剪）
+            imageRepeat: 'no-repeat', // 平铺方式
+            imageFit: 'cover',     // 适应方式
+            imageOpacity: 100,     // 不透明度
+            cropInfo: null         // 裁剪信息
+        };
+
         this.canvas = document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -24,19 +35,99 @@ class Bookmark {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
 
-        // 初始化Canvas
+        // 初始化Canvas（创建空白书签）
         this.initCanvas();
     }
 
-    // 初始化Canvas
+    // 初始化Canvas（创建空白书签）
     initCanvas() {
         // 清除Canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 渲染各个图层
-        if (layerManager) {
-            layerManager.renderLayers(this.ctx);
+        // 绘制空白背景
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 如果有背景图片，绘制背景图片
+        this.drawBackgroundImage();
+    }
+
+    // 绘制背景图片
+    drawBackgroundImage() {
+        if (!this.background.image) return;
+
+        // 保存当前状态
+        this.ctx.save();
+
+        // 设置全局透明度
+        this.ctx.globalAlpha = this.background.imageOpacity / 100;
+
+        // 根据适应方式绘制图片
+        const img = this.background.image;
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+
+        if (this.background.imageRepeat === 'no-repeat') {
+            // 不平铺
+            if (this.background.imageFit === 'cover') {
+                // 填满（保持比例，可能裁剪）
+                const imgRatio = img.width / img.height;
+                const canvasRatio = canvasWidth / canvasHeight;
+
+                let drawWidth, drawHeight, drawX, drawY;
+
+                if (imgRatio > canvasRatio) {
+                    // 图片更宽，以高度为准
+                    drawHeight = canvasHeight;
+                    drawWidth = drawHeight * imgRatio;
+                    drawX = (canvasWidth - drawWidth) / 2;
+                    drawY = 0;
+                } else {
+                    // 图片更高，以宽度为准
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / imgRatio;
+                    drawX = 0;
+                    drawY = (canvasHeight - drawHeight) / 2;
+                }
+
+                this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            } else if (this.background.imageFit === 'contain') {
+                // 包含（保持比例，可能留白）
+                const imgRatio = img.width / img.height;
+                const canvasRatio = canvasWidth / canvasHeight;
+
+                let drawWidth, drawHeight, drawX, drawY;
+
+                if (imgRatio < canvasRatio) {
+                    // 图片更高，以高度为准
+                    drawHeight = canvasHeight;
+                    drawWidth = drawHeight * imgRatio;
+                    drawX = (canvasWidth - drawWidth) / 2;
+                    drawY = 0;
+                } else {
+                    // 图片更宽，以宽度为准
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / imgRatio;
+                    drawX = 0;
+                    drawY = (canvasHeight - drawHeight) / 2;
+                }
+
+                this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            } else {
+                // 居中显示（原始大小）
+                const drawX = (canvasWidth - img.width) / 2;
+                const drawY = (canvasHeight - img.height) / 2;
+                this.ctx.drawImage(img, drawX, drawY);
+            }
+        } else {
+            // 创建图案
+            const pattern = this.ctx.createPattern(img, this.background.imageRepeat);
+            this.ctx.fillStyle = pattern;
+            this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         }
+
+        // 恢复状态
+        this.ctx.restore();
     }
 
     // 获取缩放后的尺寸
@@ -47,6 +138,56 @@ class Bookmark {
             height: this.height * scaleRatio
         };
     }
+
+    // 计算书签在背景板中的位置
+    calculatePosition(boardWidth, boardHeight) {
+        // 获取缩放后的尺寸
+        const { width, height } = this.getScaledDimensions();
+
+        // 计算X位置
+        let x;
+        if (this.position.xUnit === 'px') {
+            x = this.position.x;
+        } else {
+            // 百分比计算
+            if (this.position.x === 0) {
+                // 居中
+                x = (boardWidth - width) / 2;
+            } else {
+                // 计算百分比位置
+                const percentX = this.position.x;
+                // 将百分比转换为相对于背景板的位置
+                x = (boardWidth * (50 + percentX) / 100) - (width / 2);
+            }
+        }
+
+        // 计算Y位置
+        let y;
+        if (this.position.yUnit === 'px') {
+            y = this.position.y;
+        } else {
+            // 百分比计算
+            if (this.position.y === 0) {
+                // 垂直居中
+                y = (boardHeight - height) / 2;
+            } else {
+                // 计算百分比位置
+                const percentY = this.position.y;
+                // 将百分比转换为相对于背景板的位置
+                y = (boardHeight * percentY / 100);
+            }
+        }
+
+        return { x, y };
+    }
+
+    // 渲染书签到指定上下文
+    render(ctx, x, y, width, height) {
+        // 绘制书签内容
+        ctx.drawImage(this.canvas, x, y, width, height);
+    }
+
+
 
     // 计算在背景板中的位置
     calculatePosition(boardWidth, boardHeight) {
@@ -223,6 +364,632 @@ class BookmarkManager {
                 }
             });
         }
+
+        // 背景图片选择事件
+        const bgImageInput = document.getElementById('bgImage');
+        if (bgImageInput) {
+            bgImageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.loadBackgroundImage(file);
+                }
+            });
+        }
+
+        // 图片裁剪应用按钮事件
+        const applyCropBtn = document.getElementById('applyCropBtn');
+        if (applyCropBtn) {
+            applyCropBtn.addEventListener('click', () => {
+                this.applyCrop();
+            });
+        }
+
+        // 图片裁剪重置按钮事件
+        const resetCropBtn = document.getElementById('resetCropBtn');
+        if (resetCropBtn) {
+            resetCropBtn.addEventListener('click', () => {
+                this.resetCrop();
+            });
+        }
+
+        // 重新裁剪图片按钮事件
+        const reopenCropBtn = document.getElementById('reopenCropBtn');
+        if (reopenCropBtn) {
+            reopenCropBtn.addEventListener('click', () => {
+                this.reopenCrop();
+            });
+        }
+
+        // 图片平铺方式选择事件
+        const imageRepeatSelect = document.getElementById('imageRepeat');
+        if (imageRepeatSelect) {
+            imageRepeatSelect.addEventListener('change', () => {
+                this.updateImageSettings();
+            });
+        }
+
+        // 图片适应方式选择事件
+        const imageFitSelect = document.getElementById('imageFit');
+        if (imageFitSelect) {
+            imageFitSelect.addEventListener('change', () => {
+                this.updateImageSettings();
+            });
+        }
+
+        // 图片不透明度调整事件
+        const imageOpacityInput = document.getElementById('imageOpacity');
+        if (imageOpacityInput) {
+            imageOpacityInput.addEventListener('input', () => {
+                this.updateImageSettings();
+            });
+        }
+
+        // 从图片提取颜色按钮事件
+        const extractColorsBtn = document.getElementById('extractColorsBtn');
+        if (extractColorsBtn) {
+            extractColorsBtn.addEventListener('click', () => {
+                this.extractColorsFromImage();
+            });
+        }
+
+        // 书签缩放事件
+        const bookmarkScale = document.getElementById('bookmarkScale');
+        if (bookmarkScale) {
+            bookmarkScale.addEventListener('input', () => {
+                // 获取当前选中的书签
+                const bookmark = this.getSelectedBookmark();
+                if (bookmark) {
+                    // 更新书签缩放比例
+                    bookmark.scale = parseInt(bookmarkScale.value);
+
+                    // 更新缩放值显示
+                    const bookmarkScaleValue = document.getElementById('bookmarkScaleValue');
+                    if (bookmarkScaleValue) {
+                        bookmarkScaleValue.textContent = `${bookmark.scale}%`;
+                    }
+
+                    // 通知Canvas管理器更新UI
+                    if (this.canvasManager) {
+                        this.canvasManager.currentScale = bookmark.scale;
+                        this.canvasManager.updateBookmarkPosition();
+                    }
+                }
+            });
+        }
+    }
+
+    // 加载背景图片
+    loadBackgroundImage(file) {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark) {
+            alert('请先选择一个书签');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            // 创建一个新的Image对象来加载原始图片
+            const img = new Image();
+
+            img.onload = () => {
+                // 保存原始图片，不进行任何压缩或缩放
+                bookmark.background.image = img;
+                bookmark.background.originalImage = img; // 保存原始图片以便后续裁剪
+
+                // 显示裁剪区域
+                this.showImageCropArea(img);
+
+                // 显示重新裁剪按钮
+                const reopenCropBtn = document.getElementById('reopenCropBtn');
+                if (reopenCropBtn) {
+                    reopenCropBtn.style.display = 'block';
+                }
+
+                // 重新渲染书签
+                bookmark.initCanvas();
+
+                // 通知Canvas管理器重新渲染
+                if (this.canvasManager) {
+                    this.canvasManager.render();
+                }
+            };
+
+            // 设置图片源为文件读取结果
+            img.src = e.target.result;
+        };
+
+        // 以DataURL方式读取文件，保留完整图片数据
+        reader.readAsDataURL(file);
+    }
+
+    // 显示图片裁剪区域
+    showImageCropArea(img) {
+        // 获取裁剪容器
+        const imageCropContainer = document.getElementById('imageCropContainer');
+        if (!imageCropContainer) return;
+
+        // 显示裁剪容器
+        imageCropContainer.style.display = 'block';
+
+        // 获取预览图片元素
+        const cropPreviewImage = document.getElementById('cropPreviewImage');
+        if (!cropPreviewImage) return;
+
+        // 设置预览图片
+        cropPreviewImage.src = img.src;
+
+        // 获取裁剪选择框
+        const cropSelection = document.getElementById('cropSelection');
+        if (!cropSelection) return;
+
+        // 等待图片加载完成后再计算尺寸
+        cropPreviewImage.onload = () => {
+            // 获取容器宽度
+            const cropArea = document.querySelector('.image-crop-area');
+            const containerWidth = cropArea ? cropArea.clientWidth : 280; // 默认宽度
+
+            // 计算图片尺寸，保持原始宽高比
+            const imgRatio = img.width / img.height;
+            let imgWidth, imgHeight;
+
+            // 设置图片宽度为容器宽度，高度按比例计算
+            imgWidth = containerWidth;
+            imgHeight = containerWidth / imgRatio;
+
+            // 如果图片太高，限制最大高度
+            const maxHeight = 300; // 最大高度
+            if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = maxHeight * imgRatio;
+            }
+
+            // 设置预览图片尺寸
+            cropPreviewImage.style.width = `${imgWidth}px`;
+            cropPreviewImage.style.height = `${imgHeight}px`;
+
+            // 计算裁剪选择框的初始尺寸和位置
+            // 默认为3:4比例，居中
+            const selectionRatio = 3 / 4; // 书签比例
+            let selectionWidth, selectionHeight;
+
+            if (imgRatio > selectionRatio) {
+                // 图片更宽，以高度为准
+                selectionHeight = imgHeight * 0.8; // 80%的高度
+                selectionWidth = selectionHeight * selectionRatio;
+            } else {
+                // 图片更高，以宽度为准
+                selectionWidth = imgWidth * 0.8; // 80%的宽度
+                selectionHeight = selectionWidth / selectionRatio;
+            }
+
+            // 居中定位
+            const selectionLeft = (imgWidth - selectionWidth) / 2;
+            const selectionTop = (imgHeight - selectionHeight) / 2;
+
+            // 设置裁剪选择框的尺寸和位置
+            cropSelection.style.width = `${selectionWidth}px`;
+            cropSelection.style.height = `${selectionHeight}px`;
+            cropSelection.style.left = `${selectionLeft}px`;
+            cropSelection.style.top = `${selectionTop}px`;
+
+            // 添加拖动和调整大小功能
+            this.setupCropInteraction(cropSelection, cropPreviewImage);
+        };
+    }
+
+    // 设置裁剪交互
+    setupCropInteraction(cropSelection, cropPreviewImage) {
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY;
+        let startWidth;
+        let startLeft, startTop;
+
+        // 鼠标按下事件
+        cropSelection.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+
+            // 检查是否点击了右下角调整大小的区域
+            const rect = cropSelection.getBoundingClientRect();
+            const isResizeArea = (e.clientX > rect.right - 20) && (e.clientY > rect.bottom - 20);
+
+            if (isResizeArea) {
+                // 调整大小
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = cropSelection.offsetWidth;
+            } else {
+                // 拖动
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = cropSelection.offsetLeft;
+                startTop = cropSelection.offsetTop;
+            }
+        });
+
+        // 鼠标移动事件
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging && !isResizing) return;
+
+            e.preventDefault();
+
+            if (isResizing) {
+                // 调整大小
+                const newWidth = startWidth + (e.clientX - startX);
+
+                // 保持3:4比例
+                const ratio = 3 / 4;
+                let width = newWidth;
+                let height = width / ratio;
+
+                // 限制最小尺寸
+                const minWidth = 50;
+                if (width < minWidth) {
+                    width = minWidth;
+                    height = width / ratio;
+                }
+
+                // 限制最大尺寸
+                const maxWidth = cropPreviewImage.offsetWidth;
+                const maxHeight = cropPreviewImage.offsetHeight;
+                if (width > maxWidth) {
+                    width = maxWidth;
+                    height = width / ratio;
+                }
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = height * ratio;
+                }
+
+                // 确保选择框不超出图片边界
+                const right = cropSelection.offsetLeft + width;
+                const bottom = cropSelection.offsetTop + height;
+                if (right > cropPreviewImage.offsetWidth) {
+                    width = cropPreviewImage.offsetWidth - cropSelection.offsetLeft;
+                    height = width / ratio;
+                }
+                if (bottom > cropPreviewImage.offsetHeight) {
+                    height = cropPreviewImage.offsetHeight - cropSelection.offsetTop;
+                    width = height * ratio;
+                }
+
+                // 应用新尺寸
+                cropSelection.style.width = `${width}px`;
+                cropSelection.style.height = `${height}px`;
+            } else if (isDragging) {
+                // 拖动
+                const newLeft = startLeft + (e.clientX - startX);
+                const newTop = startTop + (e.clientY - startY);
+
+                // 限制不超出图片边界
+                const maxLeft = cropPreviewImage.offsetWidth - cropSelection.offsetWidth;
+                const maxTop = cropPreviewImage.offsetHeight - cropSelection.offsetHeight;
+
+                const left = Math.max(0, Math.min(newLeft, maxLeft));
+                const top = Math.max(0, Math.min(newTop, maxTop));
+
+                // 应用新位置
+                cropSelection.style.left = `${left}px`;
+                cropSelection.style.top = `${top}px`;
+            }
+        });
+
+        // 鼠标松开事件
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isResizing = false;
+        });
+    }
+
+    // 应用裁剪
+    applyCrop() {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark || !bookmark.background.originalImage) return;
+
+        // 获取裁剪选择框和预览图片
+        const cropSelection = document.getElementById('cropSelection');
+        const cropPreviewImage = document.getElementById('cropPreviewImage');
+        if (!cropSelection || !cropPreviewImage) return;
+
+        // 计算裁剪参数
+        const originalWidth = bookmark.background.originalImage.width;
+        const originalHeight = bookmark.background.originalImage.height;
+
+        const previewWidth = cropPreviewImage.offsetWidth;
+        const previewHeight = cropPreviewImage.offsetHeight;
+
+        const selectionLeft = cropSelection.offsetLeft;
+        const selectionTop = cropSelection.offsetTop;
+        const selectionWidth = cropSelection.offsetWidth;
+        const selectionHeight = cropSelection.offsetHeight;
+
+        // 计算原始图片上的裁剪区域
+        const cropX = (selectionLeft / previewWidth) * originalWidth;
+        const cropY = (selectionTop / previewHeight) * originalHeight;
+        const cropWidth = (selectionWidth / previewWidth) * originalWidth;
+        const cropHeight = (selectionHeight / previewHeight) * originalHeight;
+
+        // 创建Canvas进行裁剪
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 设置Canvas尺寸为裁剪区域大小
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+
+        // 绘制裁剪区域
+        ctx.drawImage(
+            bookmark.background.originalImage,
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
+        );
+
+        // 创建新图片
+        const croppedImg = new Image();
+        croppedImg.onload = () => {
+            // 更新书签背景图片
+            bookmark.background.image = croppedImg;
+
+            // 保存裁剪信息
+            bookmark.background.cropInfo = {
+                x: cropX,
+                y: cropY,
+                width: cropWidth,
+                height: cropHeight,
+                originalWidth: originalWidth,
+                originalHeight: originalHeight
+            };
+
+            // 隐藏裁剪区域
+            const imageCropContainer = document.getElementById('imageCropContainer');
+            if (imageCropContainer) {
+                imageCropContainer.style.display = 'none';
+            }
+
+            // 显示重新裁剪按钮
+            const reopenCropBtn = document.getElementById('reopenCropBtn');
+            if (reopenCropBtn) {
+                reopenCropBtn.style.display = 'block';
+            }
+
+            // 重新渲染书签
+            bookmark.initCanvas();
+
+            // 通知Canvas管理器重新渲染
+            if (this.canvasManager) {
+                this.canvasManager.render();
+            }
+        };
+
+        croppedImg.src = canvas.toDataURL('image/png');
+    }
+
+    // 重置裁剪
+    resetCrop() {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark || !bookmark.background.originalImage) return;
+
+        // 重新显示裁剪区域
+        this.showImageCropArea(bookmark.background.originalImage);
+    }
+
+    // 重新打开裁剪
+    reopenCrop() {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark || !bookmark.background.originalImage) return;
+
+        // 重新显示裁剪区域
+        this.showImageCropArea(bookmark.background.originalImage);
+    }
+
+    // 更新图片设置
+    updateImageSettings() {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark) return;
+
+        // 获取设置值
+        const imageRepeatSelect = document.getElementById('imageRepeat');
+        const imageFitSelect = document.getElementById('imageFit');
+        const imageOpacityInput = document.getElementById('imageOpacity');
+
+        if (imageRepeatSelect) {
+            bookmark.background.imageRepeat = imageRepeatSelect.value;
+        }
+
+        if (imageFitSelect) {
+            bookmark.background.imageFit = imageFitSelect.value;
+        }
+
+        if (imageOpacityInput) {
+            bookmark.background.imageOpacity = parseInt(imageOpacityInput.value);
+
+            // 更新UI
+            const imageOpacityValue = document.getElementById('imageOpacityValue');
+            if (imageOpacityValue) {
+                imageOpacityValue.textContent = `${bookmark.background.imageOpacity}%`;
+            }
+        }
+
+        // 重新渲染书签
+        bookmark.initCanvas();
+
+        // 通知Canvas管理器重新渲染
+        if (this.canvasManager) {
+            this.canvasManager.render();
+        }
+    }
+
+    // 从图片提取颜色
+    extractColorsFromImage() {
+        // 获取当前选中的书签
+        const bookmark = this.getSelectedBookmark();
+        if (!bookmark || !bookmark.background.image) {
+            alert('请先为书签添加背景图片');
+            return;
+        }
+
+        // 创建Canvas来分析图片颜色
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 设置Canvas尺寸，使用原始图片尺寸以获得更准确的颜色
+        canvas.width = bookmark.background.image.width;
+        canvas.height = bookmark.background.image.height;
+
+        // 绘制图片
+        ctx.drawImage(bookmark.background.image, 0, 0);
+
+        // 获取图片数据
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+
+        // 收集颜色样本
+        const colorSamples = [];
+        const sampleSize = 10; // 每隔10个像素采样一次
+
+        for (let i = 0; i < pixels.length; i += 4 * sampleSize) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+
+            // 跳过透明像素
+            if (pixels[i + 3] < 128) continue;
+
+            // 添加颜色样本
+            colorSamples.push({ r, g, b });
+        }
+
+        // 使用简单的聚类算法找出主要颜色（提取3种颜色）
+        const dominantColors = this.findDominantColors(colorSamples, 3);
+
+        // 创建渐变
+        if (dominantColors.length >= 3) {
+            // 转换颜色为十六进制
+            const hexColors = [
+                this.rgbToHex(dominantColors[0]),
+                this.rgbToHex(dominantColors[1]),
+                this.rgbToHex(dominantColors[2])
+            ];
+
+            // 将提取的颜色传递给Canvas管理器，用于背景板
+            if (canvasManager) {
+                canvasManager.setExtractedColors(hexColors);
+
+                // 立即应用到背景板
+                const boardElement = document.querySelector('.background-board');
+                // 获取当前渐变角度
+                const gradientAngle = 45; // 默认角度
+
+                // 创建一个三色渐变
+                const gradient = `linear-gradient(${gradientAngle}deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
+                boardElement.style.background = gradient;
+
+                // 显示应用提取颜色按钮
+                const applyExtractedColorsBtn = document.getElementById('applyExtractedColors');
+                if (applyExtractedColorsBtn) {
+                    applyExtractedColorsBtn.style.display = 'block';
+                }
+            }
+
+            // 显示日志
+            console.log('已从图片提取颜色并应用到背景板');
+        }
+    }
+
+    // 找出主要颜色
+    findDominantColors(colorSamples, k) {
+        if (colorSamples.length === 0) return [];
+
+        // 随机选择初始中心点
+        const centroids = [];
+        for (let i = 0; i < k; i++) {
+            centroids.push(colorSamples[Math.floor(Math.random() * colorSamples.length)]);
+        }
+
+        // 最大迭代次数
+        const maxIterations = 10;
+
+        for (let iteration = 0; iteration < maxIterations; iteration++) {
+            // 为每个样本分配最近的中心点
+            const clusters = Array(k).fill().map(() => []);
+
+            for (const sample of colorSamples) {
+                let minDistance = Infinity;
+                let closestCentroid = 0;
+
+                for (let i = 0; i < k; i++) {
+                    const distance = this.colorDistance(sample, centroids[i]);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestCentroid = i;
+                    }
+                }
+
+                clusters[closestCentroid].push(sample);
+            }
+
+            // 更新中心点
+            let changed = false;
+
+            for (let i = 0; i < k; i++) {
+                if (clusters[i].length === 0) continue;
+
+                const newCentroid = this.averageColor(clusters[i]);
+
+                if (!this.sameColor(newCentroid, centroids[i])) {
+                    centroids[i] = newCentroid;
+                    changed = true;
+                }
+            }
+
+            // 如果中心点不再变化，则停止迭代
+            if (!changed) break;
+        }
+
+        return centroids;
+    }
+
+    // 计算两个颜色之间的距离
+    colorDistance(color1, color2) {
+        const dr = color1.r - color2.r;
+        const dg = color1.g - color2.g;
+        const db = color1.b - color2.b;
+        return dr * dr + dg * dg + db * db;
+    }
+
+    // 计算一组颜色的平均值
+    averageColor(colors) {
+        let r = 0, g = 0, b = 0;
+
+        for (const color of colors) {
+            r += color.r;
+            g += color.g;
+            b += color.b;
+        }
+
+        return {
+            r: Math.round(r / colors.length),
+            g: Math.round(g / colors.length),
+            b: Math.round(b / colors.length)
+        };
+    }
+
+    // 检查两个颜色是否相同
+    sameColor(color1, color2) {
+        return color1.r === color2.r && color1.g === color2.g && color1.b === color2.b;
+    }
+
+    // 将RGB转换为十六进制颜色
+    rgbToHex(color) {
+        return `#${color.r.toString(16).padStart(2, '0')}${color.g.toString(16).padStart(2, '0')}${color.b.toString(16).padStart(2, '0')}`;
     }
 
     // 添加新书签
@@ -231,11 +998,19 @@ class BookmarkManager {
         const bookmark = new Bookmark(id);
         this.bookmarks.push(bookmark);
 
+        // 初始化书签Canvas
+        bookmark.initCanvas();
+
         // 更新布局
         this.updateLayout();
 
         // 更新UI
         this.updateBookmarkList();
+
+        // 通知Canvas管理器重新渲染
+        if (this.canvasManager) {
+            this.canvasManager.render();
+        }
 
         return bookmark;
     }
@@ -292,10 +1067,66 @@ class BookmarkManager {
             // 更新UI
             this.updateBookmarkList();
 
+            // 获取选中的书签
+            const bookmark = this.bookmarks[index];
+
+            // 更新背景设置UI
+            this.updateBackgroundSettingsUI(bookmark);
+
             // 通知Canvas管理器更新UI
             if (this.canvasManager) {
-                this.canvasManager.updateBookmarkUI(this.bookmarks[index]);
+                this.canvasManager.updateBookmarkUI(bookmark);
+
+                // 重新渲染Canvas以显示选中的书签
+                this.canvasManager.render();
             }
+        }
+    }
+
+    // 更新背景设置UI
+    updateBackgroundSettingsUI(bookmark) {
+        if (!bookmark) return;
+
+        // 更新书签缩放比例
+        const bookmarkScale = document.getElementById('bookmarkScale');
+        if (bookmarkScale) {
+            bookmarkScale.value = bookmark.scale;
+
+            // 更新缩放比例显示值
+            const bookmarkScaleValue = document.getElementById('bookmarkScaleValue');
+            if (bookmarkScaleValue) {
+                bookmarkScaleValue.textContent = `${bookmark.scale}%`;
+            }
+        }
+
+        // 更新图片平铺方式
+        const imageRepeatSelect = document.getElementById('imageRepeat');
+        if (imageRepeatSelect) {
+            imageRepeatSelect.value = bookmark.background.imageRepeat;
+        }
+
+        // 更新图片适应方式
+        const imageFitSelect = document.getElementById('imageFit');
+        if (imageFitSelect) {
+            imageFitSelect.value = bookmark.background.imageFit;
+        }
+
+        // 更新图片不透明度
+        const imageOpacityInput = document.getElementById('imageOpacity');
+        if (imageOpacityInput) {
+            imageOpacityInput.value = bookmark.background.imageOpacity;
+
+            // 更新不透明度显示值
+            const imageOpacityValue = document.getElementById('imageOpacityValue');
+            if (imageOpacityValue) {
+                imageOpacityValue.textContent = `${bookmark.background.imageOpacity}%`;
+            }
+        }
+
+        // 显示/隐藏重新裁剪按钮
+        const reopenCropBtn = document.getElementById('reopenCropBtn');
+        if (reopenCropBtn) {
+            reopenCropBtn.style.display = bookmark.background.originalImage ? 'block' : 'none';
         }
     }
 
@@ -315,7 +1146,7 @@ class BookmarkManager {
         this.bookmarkListContainer.innerHTML = '';
 
         // 添加书签列表项
-        this.bookmarks.forEach((bookmark, index) => {
+        this.bookmarks.forEach((_, index) => {
             const listItem = document.createElement('div');
             listItem.className = 'bookmark-item';
             if (index === this.selectedBookmarkIndex) {
@@ -341,6 +1172,11 @@ class BookmarkManager {
             this.applyHorizontalLayout();
         } else if (this.layoutType === 'vertical') {
             this.applyVerticalLayout();
+        }
+
+        // 更新每个书签的Canvas
+        for (const bookmark of this.bookmarks) {
+            bookmark.initCanvas();
         }
 
         // 通知Canvas管理器重新渲染
