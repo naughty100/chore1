@@ -37,6 +37,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="background">背景</button>
                     <button class="tab-btn" data-tab="board">背景板</button>
+                    <button class="tab-btn" data-tab="bookmarks">书签</button>
                     <button class="tab-btn" data-tab="position">位置</button>
                     <button class="tab-btn" data-tab="shadow">阴影</button>
                 </div>
@@ -268,6 +269,51 @@
                         </div>
                     </div>
 
+                    <!-- 书签管理面板 -->
+                    <div class="tab-pane" id="bookmarks-tab" style="display: none;">
+                        <h3>书签管理</h3>
+                        <div class="control-group">
+                            <label for="bookmarkCount">书签数量</label>
+                            <select id="bookmarkCount">
+                                <option value="1" selected>1个</option>
+                                <option value="2">2个</option>
+                                <option value="3">3个</option>
+                                <option value="4">4个</option>
+                                <option value="5">5个</option>
+                                <option value="6">6个</option>
+                                <option value="7">7个</option>
+                                <option value="8">8个</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="bookmarkSpacing">书签间距</label>
+                            <input type="range" id="bookmarkSpacing" min="0" max="50" value="20">
+                            <span id="bookmarkSpacingValue">20px</span>
+                        </div>
+
+                        <div class="control-group">
+                            <label>布局方式</label>
+                            <select id="layoutType">
+                                <option value="auto" selected>自动布局</option>
+                                <option value="grid">网格布局</option>
+                                <option value="horizontal">水平排列</option>
+                                <option value="vertical">垂直排列</option>
+                            </select>
+                        </div>
+
+                        <div class="bookmark-list-container">
+                            <h4>书签列表</h4>
+                            <div id="bookmarkList" class="bookmark-list">
+                                <!-- 动态生成的书签列表项 -->
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <p class="hint">提示：点击书签列表项可以选择编辑对应的书签</p>
+                        </div>
+                    </div>
+
                     <!-- 位置设置面板 -->
                     <div class="tab-pane" id="position-tab" style="display: none;">
                         <h3>书签位置</h3>
@@ -366,6 +412,7 @@
     <script src="js/layers.js"></script>
     <script src="js/backgrounds.js"></script>
     <script src="js/shadow.js"></script>
+    <script src="js/bookmarks.js"></script>
     <script src="js/export.js"></script>
     <script src="js/main.js"></script>
 </body>

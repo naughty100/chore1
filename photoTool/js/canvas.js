@@ -578,6 +578,31 @@ class BookmarkCanvas {
 
     // 更新书签位置
     updateBookmarkPosition() {
+        // 如果存在书签管理器，使用它来更新所有书签的位置
+        if (bookmarkManager) {
+            // 获取当前选中的书签
+            const selectedBookmark = bookmarkManager.getSelectedBookmark();
+            if (selectedBookmark) {
+                // 更新选中书签的位置数据
+                selectedBookmark.position = this.bookmarkPositionData;
+
+                // 更新选中书签的缩放比例
+                selectedBookmark.scale = this.currentScale;
+
+                // 重新渲染所有书签
+                bookmarkManager.updateLayout();
+            }
+
+            // 更新单个书签的显示（用于编辑预览）
+            this.updateSingleBookmarkDisplay();
+        } else {
+            // 兼容旧版本的单书签位置更新
+            this.updateSingleBookmarkDisplay();
+        }
+    }
+
+    // 更新单个书签显示（用于编辑预览）
+    updateSingleBookmarkDisplay() {
         const canvasContainer = document.querySelector('.canvas-container');
         const boardElement = document.querySelector('.background-board');
 
@@ -656,6 +681,20 @@ class BookmarkCanvas {
         // 在简化版本中不再需要渲染边框
     }
 
+    // 更新书签UI
+    updateBookmarkUI(bookmark) {
+        if (!bookmark) return;
+
+        // 更新位置UI
+        this.bookmarkPositionData = bookmark.position;
+        this.updateBookmarkPositionUI();
+
+        // 更新缩放UI
+        this.currentScale = bookmark.scale;
+        this.bookmarkScale.value = this.currentScale;
+        this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+    }
+
     // 获取Canvas数据URL
     getDataURL() {
         return this.canvas.toDataURL('image/png');
@@ -672,8 +711,6 @@ class BookmarkCanvas {
         // 启用图像平滑，使模糊效果更好
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-
-        // 使用背景板的实际尺寸
 
         // 设置导出Canvas的尺寸为背景板的实际尺寸，并考虑设备像素比以实现高清导出
         const boardWidth = parseInt(this.boardWidth.value);
@@ -746,6 +783,39 @@ class BookmarkCanvas {
         // 填充背景 - 注意这里需要使用正确的尺寸（考虑DPR缩放）
         ctx.fillRect(0, 0, boardWidth, boardHeight);
 
+        // 如果存在书签管理器，使用它来渲染所有书签
+        if (bookmarkManager) {
+            bookmarkManager.renderToExportCanvas(ctx, boardWidth, boardHeight);
+        } else {
+            // 兼容旧版本的单书签渲染
+            this.renderSingleBookmarkToExport(ctx, boardWidth, boardHeight);
+        }
+
+        // 导出为图片
+        const dataURL = exportCanvas.toDataURL('image/png');
+
+        // 创建唯一的文件名（使用时间戳）
+        const timestamp = new Date().getTime();
+        const filename = `书签卡片_${timestamp}.png`;
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = filename;
+
+        // 添加到文档中，触发点击，然后移除
+        document.body.appendChild(link);
+        link.click();
+
+        // 延迟移除链接元素
+        setTimeout(() => {
+            document.body.removeChild(link);
+            console.log(`BookmarkCanvas: 导出完成: ${filename}`);
+        }, 100);
+    }
+
+    // 渲染单个书签到导出Canvas（兼容旧版本）
+    renderSingleBookmarkToExport(ctx, boardWidth, boardHeight) {
         // 计算书签在背景板中的位置（使用用户设置的位置）
         let bookmarkX, bookmarkY;
 
@@ -760,15 +830,11 @@ class BookmarkCanvas {
         const scaledWidth = originalWidth * scaleRatio;
         const scaledHeight = originalHeight * scaleRatio;
 
-        // 使用与updateBookmarkPosition完全相同的位置计算逻辑
         // X位置计算
         if (this.bookmarkPositionData.xUnit === 'px') {
             bookmarkX = this.bookmarkPositionData.x;
         } else {
             // 百分比计算
-            // 注意：这里需要使用未缩放的尺寸（考虑DPR）
-            // 直接使用上面定义的boardWidth变量，不要重新声明
-
             // 当百分比为0时，表示居中
             if (this.bookmarkPositionData.x === 0) {
                 bookmarkX = (boardWidth - scaledWidth) / 2;
@@ -785,9 +851,6 @@ class BookmarkCanvas {
             bookmarkY = this.bookmarkPositionData.y;
         } else {
             // 百分比计算
-            // 注意：这里需要使用未缩放的尺寸（考虑DPR）
-            // 直接使用上面定义的boardHeight变量，不要重新声明
-
             // 当百分比为0时，表示垂直居中
             if (this.bookmarkPositionData.y === 0) {
                 bookmarkY = (boardHeight - scaledHeight) / 2;
@@ -858,28 +921,6 @@ class BookmarkCanvas {
             // 将缩放后的书签直接绘制到导出Canvas上
             ctx.drawImage(tempCanvas, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
         }
-
-        // 导出为图片
-        const dataURL = exportCanvas.toDataURL('image/png');
-
-        // 创建唯一的文件名（使用时间戳）
-        const timestamp = new Date().getTime();
-        const filename = `书签卡片_${timestamp}.png`;
-
-        // 创建下载链接
-        const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = filename;
-
-        // 添加到文档中，触发点击，然后移除
-        document.body.appendChild(link);
-        link.click();
-
-        // 延迟移除链接元素
-        setTimeout(() => {
-            document.body.removeChild(link);
-            console.log(`BookmarkCanvas: 导出完成: ${filename}`);
-        }, 100);
     }
 }
 
@@ -889,4 +930,7 @@ let canvasManager;
 // 在页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     canvasManager = new BookmarkCanvas('bookmarkCanvas');
+
+    // 初始化书签管理器
+    bookmarkManager = new BookmarkManager(canvasManager);
 });

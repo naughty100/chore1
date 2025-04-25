@@ -50,4 +50,24 @@ let bookmarkEditor;
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化主应用
     bookmarkEditor = new BookmarkEditor();
+
+    // 添加9:16比例按钮事件
+    const apply916RatioBtn = document.getElementById('apply916Ratio');
+    if (apply916RatioBtn) {
+        apply916RatioBtn.addEventListener('click', () => {
+            console.log('点击应用9:16比例按钮');
+            if (canvasManager) {
+                canvasManager.apply916Ratio();
+            }
+        });
+    }
+
+    // 添加布局类型切换事件
+    const layoutTypeSelect = document.getElementById('layoutType');
+    if (layoutTypeSelect && bookmarkManager) {
+        layoutTypeSelect.addEventListener('change', (e) => {
+            bookmarkManager.layoutType = e.target.value;
+            bookmarkManager.updateLayout();
+        });
+    }
 });

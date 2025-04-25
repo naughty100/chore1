@@ -161,6 +161,49 @@ canvas {
     width: 60px;
 }
 
+/* 书签管理样式 */
+.bookmark-list-container {
+    margin-top: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.bookmark-list-container h4 {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.bookmark-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.bookmark-item {
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bookmark-item:hover {
+    background-color: #f0f7ff;
+    border-color: #4a90e2;
+}
+
+.bookmark-item.selected {
+    background-color: #e6f0fa;
+    border-color: #4a90e2;
+    font-weight: bold;
+}
+
 /* 背景板尺寸控制样式 */
 .board-size {
     display: flex;
