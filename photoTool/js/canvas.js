@@ -16,7 +16,7 @@ class BookmarkCanvas {
         this.standardHeight = 600;
 
         // 获取设备像素比
-        this.dpr = window.devicePixelRatio || 1;
+        this.dpr = 3 || window.devicePixelRatio ;
 
         // 缩放比例
         this.scale = 1;
