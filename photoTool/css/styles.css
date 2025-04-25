@@ -55,7 +55,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 650px; /* 确保有足够的高度 */
-    overflow: hidden; /* 防止内容溢出 */
+    overflow: scroll; /* 防止内容溢出 */
 }
 
 .background-board {
@@ -65,7 +65,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     position: relative;
-    overflow: hidden;
+    overflow: scroll;
     margin: 0 auto; /* 居中显示 */
 }
 
@@ -189,7 +189,7 @@ canvas {
     min-width: 200px;
     min-height: 200px;
     max-width: 800px;
-    max-height: 800px;
+    max-height: 2000px;
 }
 
 /* 使书签可拖动 */
