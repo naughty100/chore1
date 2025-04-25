@@ -1,6 +1,6 @@
 /**
  * layers.js - 书签卡片编辑器的图层管理模块
- * 负责管理背景层、图案层、文字层和图标层的绘制顺序和状态
+ * 简化版本 - 仅保留背景层
  */
 
 // 图层类
@@ -296,177 +296,7 @@ class BackgroundLayer extends Layer {
     }
 }
 
-// 文字图层类
-class TextLayer extends Layer {
-    constructor(id) {
-        super(id, 'text');
 
-        // 默认文字设置
-        this.data = {
-            content: '书签示例文字',
-            direction: 'vertical',
-            font: 'SimSun',
-            size: 24,
-            color: '#FFFFFF',
-            x: 100,
-            y: 100,
-            shadow: false,
-            outline: false
-        };
-
-        // 默认隐藏文字
-        this.visible = false;
-    }
-
-    // 渲染文字
-    render(ctx) {
-        if (!this.visible || !this.data.content) return;
-
-        // 保存当前状态
-        ctx.save();
-
-        // 设置文字样式
-        ctx.font = `${this.data.size}px ${this.data.font}`;
-        ctx.fillStyle = this.data.color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // 添加文字阴影
-        if (this.data.shadow) {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            ctx.shadowBlur = 5;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-        }
-
-        // 根据方向绘制文字
-        if (this.data.direction === 'vertical') {
-            // 竖排文字
-            const chars = this.data.content.split('');
-            const lineHeight = this.data.size * 1.2;
-
-            // 检测英文单词
-            const words = [];
-            let currentWord = '';
-            let isEnglish = false;
-
-            for (let i = 0; i < chars.length; i++) {
-                const char = chars[i];
-                const code = char.charCodeAt(0);
-
-                // 检查是否是英文字符
-                const isEnglishChar = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
-
-                if (isEnglishChar) {
-                    // 英文字符
-                    currentWord += char;
-                    isEnglish = true;
-                } else {
-                    // 非英文字符
-                    if (isEnglish && currentWord) {
-                        words.push({ type: 'english', content: currentWord });
-                        currentWord = '';
-                    }
-                    words.push({ type: 'chinese', content: char });
-                    isEnglish = false;
-                }
-            }
-
-            // 处理最后一个英文单词
-            if (isEnglish && currentWord) {
-                words.push({ type: 'english', content: currentWord });
-            }
-
-            // 绘制文字
-            let y = this.data.y;
-
-            for (let i = 0; i < words.length; i++) {
-                const word = words[i];
-
-                if (word.type === 'chinese') {
-                    // 绘制中文字符
-                    if (this.data.outline) {
-                        ctx.strokeStyle = this.data.color;
-                        ctx.lineWidth = 2;
-                        ctx.strokeText(word.content, this.data.x, y);
-                    } else {
-                        ctx.fillText(word.content, this.data.x, y);
-                    }
-                    y += lineHeight;
-                } else {
-                    // 绘制英文单词
-                    ctx.save();
-                    ctx.translate(this.data.x, y);
-                    ctx.rotate(-Math.PI / 2);
-
-                    if (this.data.outline) {
-                        ctx.strokeStyle = this.data.color;
-                        ctx.lineWidth = 2;
-                        ctx.strokeText(word.content, 0, 0);
-                    } else {
-                        ctx.fillText(word.content, 0, 0);
-                    }
-
-                    ctx.restore();
-                    y += word.content.length * (this.data.size * 0.6) + lineHeight / 2;
-                }
-            }
-        } else {
-            // 横排文字
-            if (this.data.outline) {
-                ctx.strokeStyle = this.data.color;
-                ctx.lineWidth = 2;
-                ctx.strokeText(this.data.content, this.data.x, this.data.y);
-            } else {
-                ctx.fillText(this.data.content, this.data.x, this.data.y);
-            }
-        }
-
-        // 恢复状态
-        ctx.restore();
-    }
-}
-
-// 图标图层类
-class IconLayer extends Layer {
-    constructor(id) {
-        super(id, 'icon');
-
-        // 默认图标设置
-        this.data = {
-            image: null,
-            x: 100,
-            y: 300,
-            size: 40,
-            rotation: 0,
-            opacity: 100
-        };
-    }
-
-    // 渲染图标
-    render(ctx) {
-        if (!this.visible || !this.data.image) return;
-
-        // 保存当前状态
-        ctx.save();
-
-        // 设置透明度
-        ctx.globalAlpha = this.data.opacity / 100;
-
-        // 移动到图标位置
-        ctx.translate(this.data.x, this.data.y);
-
-        // 旋转
-        ctx.rotate(this.data.rotation * Math.PI / 180);
-
-        // 绘制图标
-        const size = this.data.size;
-        ctx.drawImage(this.data.image, -size / 2, -size / 2, size, size);
-
-        // 恢复状态
-        ctx.restore();
-    }
-}
 
 // 图层管理器类
 class LayerManager {
@@ -482,12 +312,6 @@ class LayerManager {
     initDefaultLayers() {
         // 创建背景图层
         this.addLayer(new BackgroundLayer('background'));
-
-        // 创建文字图层
-        this.addLayer(new TextLayer('text'));
-
-        // 创建图标图层
-        this.addLayer(new IconLayer('icon'));
     }
 
     // 添加图层

@@ -12,12 +12,11 @@
             <h1>书签卡片编辑器</h1>
             <div class="header-actions">
                 <button id="exportBtn" class="btn primary">导出书签</button>
-                <button id="saveBtn" class="btn">保存设置</button>
-                <button id="loadBtn" class="btn">加载设置</button>
             </div>
         </header>
 
         <main class="app-main">
+            <!-- 左侧编辑器面板 - 专注于背景板和书签的展示 -->
             <div class="editor-panel">
                 <div class="background-board">
                     <div class="canvas-container">
@@ -31,122 +30,14 @@
                         </div>
                     </div>
                 </div>
-                <div class="board-controls">
-                    <h3>背景板设置</h3>
-                    <div class="control-group">
-                        <label for="boardColor">背景板颜色</label>
-                        <input type="color" id="boardColor" value="#F5F5F5">
-                    </div>
-                    <div class="control-group">
-                        <label for="boardRatio">背景板比例</label>
-                        <select id="boardRatio">
-                            <option value="3:4" selected>3:4 (默认)</option>
-                            <option value="1:1">1:1 (正方形)</option>
-                            <option value="4:3">4:3 (横向)</option>
-                            <option value="16:9">16:9 (宽屏)</option>
-                            <option value="custom">自定义</option>
-                        </select>
-                    </div>
-                    <div class="control-group board-size">
-                        <div class="size-input">
-                            <label for="boardWidth">宽度</label>
-                            <input type="number" id="boardWidth" min="200" max="800" value="400">
-                            <span>px</span>
-                        </div>
-                        <div class="size-input">
-                            <label for="boardHeight">高度</label>
-                            <input type="number" id="boardHeight" min="200" max="800" value="533">
-                            <span>px</span>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <label for="bookmarkScale">书签缩放</label>
-                        <input type="range" id="bookmarkScale" min="30" max="100" value="100">
-                        <span id="bookmarkScaleValue">100%</span>
-                    </div>
-                    <div class="control-group">
-                        <label for="boardGradientType">渐变类型</label>
-                        <select id="boardGradientType">
-                            <option value="none">无渐变</option>
-                            <option value="linear" selected>线性渐变</option>
-                            <option value="radial">径向渐变</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label for="boardGradientAngle">渐变角度</label>
-                        <input type="range" id="boardGradientAngle" min="0" max="360" value="45">
-                        <span id="boardGradientAngleValue">45°</span>
-                    </div>
-                    <div class="control-group gradient-positions">
-                        <label>渐变位置</label>
-                        <div class="position-controls">
-                            <div class="position-control">
-                                <span class="color-preview" style="background-color: #FF0000;"></span>
-                                <input type="range" id="gradientPos1" min="0" max="100" value="0">
-                                <span id="gradientPos1Value">0%</span>
-                            </div>
-                            <div class="position-control">
-                                <span class="color-preview" style="background-color: #00FF00;"></span>
-                                <input type="range" id="gradientPos2" min="0" max="100" value="50">
-                                <span id="gradientPos2Value">50%</span>
-                            </div>
-                            <div class="position-control">
-                                <span class="color-preview" style="background-color: #0000FF;"></span>
-                                <input type="range" id="gradientPos3" min="0" max="100" value="100">
-                                <span id="gradientPos3Value">100%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <button id="applyExtractedColors" class="btn small" style="display: none;">应用提取的颜色到背景板</button>
-                    </div>
-                    <div class="control-group">
-                        <p class="hint">提示：可以从图片提取颜色应用到背景板</p>
-                    </div>
-
-                    <h3>书签位置</h3>
-                    <div class="control-group">
-                        <label for="bookmarkPosition">预设位置</label>
-                        <select id="bookmarkPosition">
-                            <option value="center">居中</option>
-                            <option value="top">顶部居中</option>
-                            <option value="bottom">底部居中</option>
-                            <option value="left">左侧居中</option>
-                            <option value="right">右侧居中</option>
-                            <option value="custom">自定义</option>
-                        </select>
-                    </div>
-                    <div class="control-group position-controls">
-                        <div class="position-input">
-                            <label for="bookmarkX">X位置</label>
-                            <input type="number" id="bookmarkX" min="0" value="0">
-                            <select id="bookmarkXUnit">
-                                <option value="px">像素</option>
-                                <option value="percent" selected>百分比</option>
-                            </select>
-                        </div>
-                        <div class="position-input">
-                            <label for="bookmarkY">Y位置</label>
-                            <input type="number" id="bookmarkY" min="0" value="15">
-                            <select id="bookmarkYUnit">
-                                <option value="px">像素</option>
-                                <option value="percent" selected>百分比</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <p class="hint">提示：您也可以直接拖动书签调整位置</p>
-                    </div>
-                </div>
             </div>
 
+            <!-- 右侧控制面板 -->
             <div class="controls-panel">
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="background">背景</button>
-                    <button class="tab-btn" data-tab="text">文字</button>
-                    <button class="tab-btn" data-tab="icon">图标</button>
-                    <button class="tab-btn" data-tab="border">边框</button>
-                    <button class="tab-btn" data-tab="template">模板</button>
+                    <button class="tab-btn" data-tab="board">背景板</button>
+                    <button class="tab-btn" data-tab="position">位置</button>
                 </div>
 
                 <div class="tab-content">
@@ -300,188 +191,115 @@
                         </div>
                     </div>
 
-                    <!-- 文字设置面板 -->
-                    <div class="tab-pane" id="text-tab" style="display: none;">
-                        <h3>文字内容</h3>
+                    <!-- 背景板设置面板 -->
+                    <div class="tab-pane" id="board-tab" style="display: none;">
+                        <h3>背景板设置</h3>
                         <div class="control-group">
-                            <label for="textContent">文字内容</label>
-                            <textarea id="textContent" rows="4" placeholder="输入文字内容...">书签示例文字</textarea>
+                            <label for="boardColor">背景板颜色</label>
+                            <input type="color" id="boardColor" value="#F5F5F5">
                         </div>
                         <div class="control-group">
-                            <label for="textDirection">排列方向</label>
-                            <select id="textDirection">
-                                <option value="vertical" selected>竖排</option>
-                                <option value="horizontal">横排</option>
+                            <label for="boardRatio">背景板比例</label>
+                            <select id="boardRatio">
+                                <option value="3:4" selected>3:4 (默认)</option>
+                                <option value="1:1">1:1 (正方形)</option>
+                                <option value="4:3">4:3 (横向)</option>
+                                <option value="16:9">16:9 (宽屏)</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="control-group board-size">
+                            <div class="size-input">
+                                <label for="boardWidth">宽度</label>
+                                <input type="number" id="boardWidth" min="200" max="800" value="400">
+                                <span>px</span>
+                            </div>
+                            <div class="size-input">
+                                <label for="boardHeight">高度</label>
+                                <input type="number" id="boardHeight" min="200" max="800" value="533">
+                                <span>px</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="bookmarkScale">书签缩放</label>
+                            <input type="range" id="bookmarkScale" min="30" max="100" value="100">
+                            <span id="bookmarkScaleValue">100%</span>
+                        </div>
+                        <div class="control-group">
+                            <label for="boardGradientType">渐变类型</label>
+                            <select id="boardGradientType">
+                                <option value="none">无渐变</option>
+                                <option value="linear" selected>线性渐变</option>
+                                <option value="radial">径向渐变</option>
                             </select>
                         </div>
                         <div class="control-group">
-                            <label for="textFont">字体</label>
-                            <select id="textFont">
-                                <option value="SimSun">宋体</option>
-                                <option value="KaiTi">楷体</option>
-                                <option value="Microsoft YaHei">微软雅黑</option>
-                                <option value="Arial">Arial</option>
-                                <option value="custom">自定义字体</option>
+                            <label for="boardGradientAngle">渐变角度</label>
+                            <input type="range" id="boardGradientAngle" min="0" max="360" value="45">
+                            <span id="boardGradientAngleValue">45°</span>
+                        </div>
+                        <div class="control-group gradient-positions">
+                            <label>渐变位置</label>
+                            <div class="position-controls">
+                                <div class="position-control">
+                                    <span class="color-preview" style="background-color: #FF0000;"></span>
+                                    <input type="range" id="gradientPos1" min="0" max="100" value="0">
+                                    <span id="gradientPos1Value">0%</span>
+                                </div>
+                                <div class="position-control">
+                                    <span class="color-preview" style="background-color: #00FF00;"></span>
+                                    <input type="range" id="gradientPos2" min="0" max="100" value="50">
+                                    <span id="gradientPos2Value">50%</span>
+                                </div>
+                                <div class="position-control">
+                                    <span class="color-preview" style="background-color: #0000FF;"></span>
+                                    <input type="range" id="gradientPos3" min="0" max="100" value="100">
+                                    <span id="gradientPos3Value">100%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <button id="applyExtractedColors" class="btn small" style="display: none;">应用提取的颜色到背景板</button>
+                        </div>
+                        <div class="control-group">
+                            <p class="hint">提示：可以从图片提取颜色应用到背景板</p>
+                        </div>
+                    </div>
+
+                    <!-- 位置设置面板 -->
+                    <div class="tab-pane" id="position-tab" style="display: none;">
+                        <h3>书签位置</h3>
+                        <div class="control-group">
+                            <label for="bookmarkPosition">预设位置</label>
+                            <select id="bookmarkPosition">
+                                <option value="center">居中</option>
+                                <option value="top">顶部居中</option>
+                                <option value="bottom">底部居中</option>
+                                <option value="left">左侧居中</option>
+                                <option value="right">右侧居中</option>
+                                <option value="custom">自定义</option>
                             </select>
                         </div>
-                        <div class="control-group">
-                            <label for="textSize">字体大小</label>
-                            <input type="range" id="textSize" min="12" max="72" value="24">
-                            <span id="textSizeValue">24px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="textColor">字体颜色</label>
-                            <input type="color" id="textColor" value="#FFFFFF">
-                        </div>
-                        <div class="control-group">
-                            <label for="textX">X位置</label>
-                            <input type="range" id="textX" min="0" max="200" value="100">
-                            <span id="textXValue">100px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="textY">Y位置</label>
-                            <input type="range" id="textY" min="0" max="600" value="100">
-                            <span id="textYValue">100px</span>
-                        </div>
-                        <div class="control-group">
-                            <label>
-                                <input type="checkbox" id="textShadow">
-                                文字阴影
-                            </label>
-                        </div>
-                        <div class="control-group">
-                            <label>
-                                <input type="checkbox" id="textOutline">
-                                文字描边
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 图标设置面板 -->
-                    <div class="tab-pane" id="icon-tab" style="display: none;">
-                        <h3>图标设置</h3>
-                        <div class="control-group">
-                            <label for="iconFile">上传图标</label>
-                            <input type="file" id="iconFile" accept="image/*">
-                        </div>
-                        <div class="control-group">
-                            <label>预设图标</label>
-                            <div class="icon-grid">
-                                <div class="icon-item" data-icon="icon1">
-                                    <img src="assets/icons/icon1.svg" alt="图标1">
-                                </div>
-                                <div class="icon-item" data-icon="icon2">
-                                    <img src="assets/icons/icon2.svg" alt="图标2">
-                                </div>
-                                <div class="icon-item" data-icon="icon3">
-                                    <img src="assets/icons/icon3.svg" alt="图标3">
-                                </div>
-                                <div class="icon-item" data-icon="icon4">
-                                    <img src="assets/icons/icon4.svg" alt="图标4">
-                                </div>
+                        <div class="control-group position-controls">
+                            <div class="position-input">
+                                <label for="bookmarkX">X位置</label>
+                                <input type="number" id="bookmarkX" min="0" value="0">
+                                <select id="bookmarkXUnit">
+                                    <option value="px">像素</option>
+                                    <option value="percent" selected>百分比</option>
+                                </select>
+                            </div>
+                            <div class="position-input">
+                                <label for="bookmarkY">Y位置</label>
+                                <input type="number" id="bookmarkY" min="0" value="15">
+                                <select id="bookmarkYUnit">
+                                    <option value="px">像素</option>
+                                    <option value="percent" selected>百分比</option>
+                                </select>
                             </div>
                         </div>
                         <div class="control-group">
-                            <label for="iconSize">图标大小</label>
-                            <input type="range" id="iconSize" min="10" max="100" value="40">
-                            <span id="iconSizeValue">40px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="iconX">X位置</label>
-                            <input type="range" id="iconX" min="0" max="200" value="100">
-                            <span id="iconXValue">100px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="iconY">Y位置</label>
-                            <input type="range" id="iconY" min="0" max="600" value="300">
-                            <span id="iconYValue">300px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="iconRotation">旋转角度</label>
-                            <input type="range" id="iconRotation" min="0" max="360" value="0">
-                            <span id="iconRotationValue">0°</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="iconOpacity">不透明度</label>
-                            <input type="range" id="iconOpacity" min="0" max="100" value="100">
-                            <span id="iconOpacityValue">100%</span>
-                        </div>
-                    </div>
-
-                    <!-- 边框设置面板 -->
-                    <div class="tab-pane" id="border-tab" style="display: none;">
-                        <h3>边框样式</h3>
-                        <div class="control-group">
-                            <label for="borderStyle">边框样式</label>
-                            <select id="borderStyle">
-                                <option value="none">无边框</option>
-                                <option value="solid">实线边框</option>
-                                <option value="double">双线边框</option>
-                                <option value="dashed">虚线边框</option>
-                                <option value="3d">3D立体边框</option>
-                                <option value="shadow">阴影边框</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="borderWidth">边框宽度</label>
-                            <input type="range" id="borderWidth" min="0" max="20" value="2">
-                            <span id="borderWidthValue">2px</span>
-                        </div>
-                        <div class="control-group">
-                            <label for="borderColor">边框颜色</label>
-                            <input type="color" id="borderColor" value="#000000">
-                        </div>
-                        <div class="control-group">
-                            <label for="borderRadius">圆角半径</label>
-                            <input type="range" id="borderRadius" min="0" max="30" value="0">
-                            <span id="borderRadiusValue">0px</span>
-                        </div>
-
-                        <!-- 3D边框和阴影设置 -->
-                        <div id="shadowSettings">
-                            <h3>阴影设置</h3>
-                            <div class="control-group">
-                                <label for="shadowDepth">阴影深度</label>
-                                <input type="range" id="shadowDepth" min="1" max="20" value="5">
-                                <span id="shadowDepthValue">5px</span>
-                            </div>
-                            <div class="control-group">
-                                <label for="shadowColor">阴影颜色</label>
-                                <input type="color" id="shadowColor" value="#000000">
-                            </div>
-                            <div class="control-group">
-                                <label for="shadowOpacity">阴影不透明度</label>
-                                <input type="range" id="shadowOpacity" min="0" max="100" value="30">
-                                <span id="shadowOpacityValue">30%</span>
-                            </div>
-                            <div class="control-group">
-                                <label for="shadowAngle">阴影角度</label>
-                                <input type="range" id="shadowAngle" min="0" max="360" value="45">
-                                <span id="shadowAngleValue">45°</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 模板设置面板 -->
-                    <div class="tab-pane" id="template-tab" style="display: none;">
-                        <h3>书签模板</h3>
-                        <div class="template-grid">
-                            <div class="template-item" data-template="template1">
-                                <div class="template-preview" style="background-color: #8B0000;"></div>
-                                <span>红色简约</span>
-                            </div>
-                            <div class="template-item" data-template="template2">
-                                <div class="template-preview" style="background: linear-gradient(45deg, #ff9a9e, #fad0c4);"></div>
-                                <span>粉色渐变</span>
-                            </div>
-                            <div class="template-item" data-template="template3">
-                                <div class="template-preview" style="background: url('assets/textures/waves.jpg');"></div>
-                                <span>海浪纹理</span>
-                            </div>
-                            <div class="template-item" data-template="template4">
-                                <div class="template-preview" style="background: repeating-linear-gradient(45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px);"></div>
-                                <span>斜条纹</span>
-                            </div>
+                            <p class="hint">提示：您也可以直接拖动书签调整位置</p>
                         </div>
                     </div>
                 </div>
@@ -493,9 +311,6 @@
     <script src="js/canvas.js"></script>
     <script src="js/layers.js"></script>
     <script src="js/backgrounds.js"></script>
-    <script src="js/text.js"></script>
-    <script src="js/icons.js"></script>
-    <script src="js/border.js"></script>
     <script src="js/export.js"></script>
     <script src="js/main.js"></script>
 </body>

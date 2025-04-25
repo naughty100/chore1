@@ -49,14 +49,13 @@ body {
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 30px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
-    gap: 15px;
     min-height: 650px; /* 确保有足够的高度 */
-    overflow-y: auto; /* 如果内容过多，允许滚动 */
+    overflow: hidden; /* 防止内容溢出 */
 }
 
 .background-board {
@@ -221,11 +220,13 @@ canvas {
 
 /* 控制面板样式 */
 .controls-panel {
-    width: 300px;
+    width: 320px;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* 标签页样式 */
@@ -236,22 +237,25 @@ canvas {
 
 .tab-btn {
     flex: 1;
-    padding: 10px;
+    padding: 12px 10px;
     background: none;
     border: none;
     cursor: pointer;
     font-size: 14px;
     transition: all 0.3s ease;
+    color: #666;
 }
 
 .tab-btn:hover {
     background-color: #f0f0f0;
+    color: #333;
 }
 
 .tab-btn.active {
-    background-color: #f0f0f0;
+    background-color: #f0f7ff;
     border-bottom: 2px solid #4a90e2;
     font-weight: bold;
+    color: #4a90e2;
 }
 
 .tab-content {
