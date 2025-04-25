@@ -83,7 +83,11 @@ class BackgroundLayer extends Layer {
 
                 if (gradientData.type === 'linear') {
                     // 计算渐变起点和终点
-                    const angle = gradientData.angle * Math.PI / 180;
+                    // 在Canvas中，角度是从x轴正方向开始，逆时针旋转
+                    // 而在CSS中，角度是从y轴负方向开始，顺时针旋转
+                    // 所以需要进行转换：Canvas角度 = CSS角度
+                    const canvasAngle = gradientData.angle;
+                    const angle = canvasAngle * Math.PI / 180;
                     const x0 = width / 2 - Math.cos(angle) * width / 2;
                     const y0 = height / 2 - Math.sin(angle) * height / 2;
                     const x1 = width / 2 + Math.cos(angle) * width / 2;

@@ -704,9 +704,14 @@ class BackgroundManager {
                 const boardElement = document.querySelector('.background-board');
                 // 获取当前渐变角度
                 const gradientAngle = data.gradient.angle || 45;
+                console.log('获取当前渐变角度:', gradientAngle);
 
-                // 创建一个三色渐变，使用当前设置的角度
-                const gradient = `linear-gradient(${gradientAngle}deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
+                // 将Canvas角度转换为CSS角度 (CSS角度 = 90 - Canvas角度)
+                // 例如：Canvas中的45度 -> CSS中的45度
+                const cssAngle = gradientAngle;
+
+                // 创建一个三色渐变，使用转换后的CSS角度
+                const gradient = `linear-gradient(${cssAngle}deg, ${hexColors[0]}, ${hexColors[1]}, ${hexColors[2]})`;
                 boardElement.style.background = gradient;
 
                 // 更新渐变数据
@@ -913,10 +918,11 @@ class BackgroundManager {
             if (this.backgroundLayer) {
                 const angle = parseInt(this.gradientAngleInput.value);
                 this.gradientAngleValue.textContent = `${angle}°`;
-
+                console.log(`设置渐变角度: ${angle}°`); // 添加日志
                 const data = this.backgroundLayer.getData();
                 data.gradient.angle = angle;
                 this.backgroundLayer.setData(data);
+
                 this.render();
             }
         });

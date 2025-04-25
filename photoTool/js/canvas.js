@@ -461,8 +461,8 @@ class BookmarkCanvas {
                 const pos1 = this.gradientPositions[0];
                 const pos2 = this.gradientPositions[1];
                 const pos3 = this.gradientPositions[2];
-
-                boardElement.style.background = `linear-gradient(${this.gradientAngle}deg,
+                console.log('canvas this.gradientAngle: ',this.gradientAngle)
+                boardElement.style.background = `linear-gradient(${(this.gradientAngle + 90) % 360}deg,
                     ${this.extractedColors[0]} ${pos1}%,
                     ${this.extractedColors[1]} ${pos2}%,
                     ${this.extractedColors[2]} ${pos3}%)`;
@@ -695,7 +695,11 @@ class BookmarkCanvas {
             if (this.gradientType === 'linear') {
                 // 线性渐变 - 使用指定角度
                 // 注意：这里需要使用正确的角度值
-                const angleRad = this.gradientAngle * Math.PI / 180;
+                // 在Canvas中，角度是从x轴正方向开始，逆时针旋转
+                // 而在CSS中，角度是从y轴负方向开始，顺时针旋转
+                // 所以需要进行转换：Canvas角度 = CSS角度
+                const canvasAngle = this.gradientAngle;
+                const angleRad = canvasAngle * Math.PI / 180;
 
                 // 使用与layers.js中完全相同的计算方式
                 // 计算渐变起点和终点
