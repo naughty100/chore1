@@ -273,6 +273,31 @@ canvas {
     margin-bottom: 15px;
 }
 
+/* 阴影设置样式 */
+#shadowSettings {
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    margin-top: 10px;
+}
+
+#shadowEnabled {
+    margin-right: 8px;
+}
+
+#shadowOpacityValue,
+#shadowBlurValue,
+#shadowOffsetXValue,
+#shadowOffsetYValue,
+#shadowDepthValue,
+#shadowSpreadValue {
+    width: 45px;
+    display: inline-block;
+    text-align: right;
+    font-size: 12px;
+}
+
 h3 {
     margin-bottom: 15px;
     font-size: 16px;

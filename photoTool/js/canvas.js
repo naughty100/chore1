@@ -808,6 +808,11 @@ class BookmarkCanvas {
         tempCtx.drawImage(this.canvas, 0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr,
                           0, 0, scaledWidth, scaledHeight);
 
+        // 如果启用了阴影，先绘制阴影
+        if (shadowManager && shadowManager.getShadowSettings().enabled) {
+            shadowManager.applyShadowToCanvas(ctx, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
+        }
+
         // 将缩放后的书签绘制到导出Canvas上
         // 注意：这里需要考虑DPR缩放
         ctx.drawImage(tempCanvas,

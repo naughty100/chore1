@@ -38,6 +38,7 @@
                     <button class="tab-btn active" data-tab="background">背景</button>
                     <button class="tab-btn" data-tab="board">背景板</button>
                     <button class="tab-btn" data-tab="position">位置</button>
+                    <button class="tab-btn" data-tab="shadow">阴影</button>
                 </div>
 
                 <div class="tab-content">
@@ -302,6 +303,69 @@
                             <p class="hint">提示：您也可以直接拖动书签调整位置</p>
                         </div>
                     </div>
+
+                    <!-- 阴影设置面板 -->
+                    <div class="tab-pane" id="shadow-tab" style="display: none;">
+                        <h3>书签阴影</h3>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="shadowEnabled" checked>
+                                启用阴影
+                            </label>
+                        </div>
+
+                        <div id="shadowSettings">
+                            <div class="control-group">
+                                <label for="shadowType">阴影类型</label>
+                                <select id="shadowType">
+                                    <option value="drop">普通阴影</option>
+                                    <option value="3d" selected>3D立体阴影</option>
+                                    <option value="glow">发光效果</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="shadowColor">阴影颜色</label>
+                                <input type="color" id="shadowColor" value="#000000">
+                            </div>
+
+                            <div class="control-group">
+                                <label for="shadowOpacity">不透明度</label>
+                                <input type="range" id="shadowOpacity" min="0" max="100" value="50">
+                                <span id="shadowOpacityValue">50%</span>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="shadowBlur">模糊半径</label>
+                                <input type="range" id="shadowBlur" min="0" max="50" value="10">
+                                <span id="shadowBlurValue">10px</span>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="shadowOffsetX">水平偏移</label>
+                                <input type="range" id="shadowOffsetX" min="-50" max="50" value="5">
+                                <span id="shadowOffsetXValue">5px</span>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="shadowOffsetY">垂直偏移</label>
+                                <input type="range" id="shadowOffsetY" min="-50" max="50" value="5">
+                                <span id="shadowOffsetYValue">5px</span>
+                            </div>
+
+                            <div class="control-group" id="shadow3dSettings">
+                                <label for="shadowDepth">阴影深度</label>
+                                <input type="range" id="shadowDepth" min="1" max="30" value="10">
+                                <span id="shadowDepthValue">10px</span>
+                            </div>
+
+                            <div class="control-group" id="shadowGlowSettings" style="display: none;">
+                                <label for="shadowSpread">扩散范围</label>
+                                <input type="range" id="shadowSpread" min="0" max="50" value="5">
+                                <span id="shadowSpreadValue">5px</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -311,6 +375,7 @@
     <script src="js/canvas.js"></script>
     <script src="js/layers.js"></script>
     <script src="js/backgrounds.js"></script>
+    <script src="js/shadow.js"></script>
     <script src="js/export.js"></script>
     <script src="js/main.js"></script>
 </body>
