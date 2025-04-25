@@ -663,6 +663,8 @@ class BookmarkCanvas {
 
     // 导出为图片（包含背景板）
     exportImage() {
+        console.log('BookmarkCanvas: 开始导出图片');
+
         // 创建一个新的Canvas来绘制完整的书签（包括背景板）
         const exportCanvas = document.createElement('canvas');
         const ctx = exportCanvas.getContext('2d');
@@ -831,7 +833,7 @@ class BookmarkCanvas {
         // 延迟移除链接元素
         setTimeout(() => {
             document.body.removeChild(link);
-            console.log(`导出完成: ${filename}`);
+            console.log(`BookmarkCanvas: 导出完成: ${filename}`);
         }, 100);
     }
 }

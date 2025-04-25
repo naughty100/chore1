@@ -22,20 +22,25 @@ class ExportManager {
 
     // 导出书签
     exportBookmark() {
+        console.log('ExportManager: 开始导出书签');
+
         if (canvasManager && !this.isExporting) {
             // 设置导出标志，防止重复导出
             this.isExporting = true;
+            console.log('ExportManager: 设置导出标志，防止重复导出');
 
             // 禁用导出按钮
             if (this.exportBtn) {
                 this.exportBtn.disabled = true;
+                console.log('ExportManager: 禁用导出按钮');
             }
 
             try {
                 // 执行导出
+                console.log('ExportManager: 调用canvasManager.exportImage()');
                 canvasManager.exportImage();
             } catch (error) {
-                console.error('导出失败:', error);
+                console.error('ExportManager: 导出失败:', error);
                 alert('导出失败，请查看控制台获取详细信息');
             } finally {
                 // 延迟重新启用导出功能
@@ -44,8 +49,12 @@ class ExportManager {
                     if (this.exportBtn) {
                         this.exportBtn.disabled = false;
                     }
+                    console.log('ExportManager: 导出完成，重新启用导出按钮');
                 }, 1000);
             }
+        } else {
+            console.log('ExportManager: 导出被跳过，原因：',
+                        !canvasManager ? 'canvasManager不存在' : '正在导出中');
         }
     }
 
@@ -121,18 +130,25 @@ class ExportManager {
     bindEvents() {
         // 导出按钮
         this.exportBtn.addEventListener('click', () => {
+            console.log('ExportManager: 导出按钮被点击');
             this.exportBookmark();
         });
 
         // 保存设置按钮
-        this.saveBtn.addEventListener('click', () => {
-            this.saveSettings();
-        });
+        if (this.saveBtn) {
+            this.saveBtn.addEventListener('click', () => {
+                this.saveSettings();
+            });
+        }
 
         // 加载设置按钮
-        this.loadBtn.addEventListener('click', () => {
-            this.loadSettings();
-        });
+        if (this.loadBtn) {
+            this.loadBtn.addEventListener('click', () => {
+                this.loadSettings();
+            });
+        }
+
+        console.log('ExportManager: 事件绑定完成');
     }
 }
 

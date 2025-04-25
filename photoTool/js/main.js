@@ -11,9 +11,6 @@ class BookmarkEditor {
         this.tabBtns = document.querySelectorAll('.tab-btn');
         this.tabPanes = document.querySelectorAll('.tab-pane');
 
-        // 导出按钮
-        this.exportBtn = document.getElementById('exportBtn');
-
         // 绑定事件
         this.bindEvents();
     }
@@ -42,30 +39,7 @@ class BookmarkEditor {
             });
         });
 
-        // 导出按钮事件
-        if (this.exportBtn) {
-            // 使用一个标志来防止多次点击导致多次导出
-            let isExporting = false;
-
-            this.exportBtn.addEventListener('click', () => {
-                console.log('导出书签');
-                if (canvasManager && !isExporting) {
-                    isExporting = true;
-
-                    // 禁用按钮，防止重复点击
-                    this.exportBtn.disabled = true;
-
-                    // 执行导出
-                    canvasManager.exportImage();
-
-                    // 延迟重新启用按钮
-                    setTimeout(() => {
-                        isExporting = false;
-                        this.exportBtn.disabled = false;
-                    }, 1000); // 1秒后重新启用
-                }
-            });
-        }
+        // 注意：导出按钮事件已移至export.js中处理
     }
 }
 
