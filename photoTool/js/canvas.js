@@ -812,27 +812,50 @@ class BookmarkCanvas {
         tempCtx.drawImage(this.canvas, 0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr,
                           0, 0, scaledWidth, scaledHeight);
 
-        // 如果启用了阴影，先绘制阴影
+        // 如果启用了阴影，使用临时Canvas创建带阴影的书签
         if (shadowManager && shadowManager.getShadowSettings().enabled) {
             console.log('Canvas: 应用阴影到导出图片');
 
-            // 保存当前状态
-            ctx.save();
+            // 创建带阴影的书签
+            const shadowResult = shadowManager.applyShadowToCanvas(null, 0, 0, scaledWidth, scaledHeight);
 
-            // 先绘制阴影
-            shadowManager.applyShadowToCanvas(ctx, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
+            if (shadowResult) {
+                // 获取带阴影的临时Canvas
+                const shadowCanvas = shadowResult.canvas;
+                const shadowOffsetX = shadowResult.offsetX;
+                const shadowOffsetY = shadowResult.offsetY;
 
-            // 恢复状态，确保阴影不会影响后续绘制
-            ctx.restore();
+                // 在阴影Canvas上绘制实际的书签内容
+                const shadowCtx = shadowCanvas.getContext('2d');
+
+                // 先保存当前状态
+                shadowCtx.save();
+
+                // 绘制书签内容到阴影Canvas上
+                shadowCtx.drawImage(tempCanvas, shadowOffsetX, shadowOffsetY, scaledWidth, scaledHeight);
+
+                // 恢复状态
+                shadowCtx.restore();
+
+                // 将带阴影的书签绘制到导出Canvas上
+                ctx.drawImage(
+                    shadowCanvas,
+                    0, 0, shadowCanvas.width, shadowCanvas.height,
+                    bookmarkX - shadowOffsetX, bookmarkY - shadowOffsetY, shadowCanvas.width, shadowCanvas.height
+                );
+
+                console.log('Canvas: 阴影应用成功');
+            } else {
+                // 如果阴影创建失败，直接绘制书签
+                console.log('Canvas: 阴影创建失败，直接绘制书签');
+                ctx.drawImage(tempCanvas, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
+            }
         } else {
             console.log('Canvas: 导出时未应用阴影');
-        }
 
-        // 将缩放后的书签绘制到导出Canvas上
-        // 注意：这里需要考虑DPR缩放
-        ctx.drawImage(tempCanvas,
-                     bookmarkX, bookmarkY,
-                     scaledWidth, scaledHeight);
+            // 将缩放后的书签直接绘制到导出Canvas上
+            ctx.drawImage(tempCanvas, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
+        }
 
         // 导出为图片
         const dataURL = exportCanvas.toDataURL('image/png');

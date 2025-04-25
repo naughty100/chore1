@@ -315,14 +315,7 @@
                         </div>
 
                         <div id="shadowSettings">
-                            <div class="control-group">
-                                <label for="shadowType">阴影类型</label>
-                                <select id="shadowType">
-                                    <option value="drop">普通阴影</option>
-                                    <option value="3d" selected>3D立体阴影</option>
-                                    <option value="glow">发光效果</option>
-                                </select>
-                            </div>
+                            <!-- 只保留普通阴影，移除阴影类型选择 -->
 
                             <div class="control-group">
                                 <label for="shadowColor">阴影颜色</label>
@@ -359,17 +352,7 @@
                                 <span id="shadowAngleValue">45°</span>
                             </div>
 
-                            <div class="control-group" id="shadow3dSettings">
-                                <label for="shadowDepth">阴影深度</label>
-                                <input type="range" id="shadowDepth" min="1" max="30" value="10">
-                                <span id="shadowDepthValue">10px</span>
-                            </div>
-
-                            <div class="control-group" id="shadowGlowSettings" style="display: none;">
-                                <label for="shadowSpread">扩散范围</label>
-                                <input type="range" id="shadowSpread" min="0" max="50" value="5">
-                                <span id="shadowSpreadValue">5px</span>
-                            </div>
+                            <!-- 移除3D阴影和发光效果相关设置 -->
                         </div>
                     </div>
                 </div>
