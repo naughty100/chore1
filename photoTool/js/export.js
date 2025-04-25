@@ -8,29 +8,54 @@ class ExportManager {
     constructor() {
         // 导出按钮
         this.exportBtn = document.getElementById('exportBtn');
-        
+
         // 保存/加载设置按钮
         this.saveBtn = document.getElementById('saveBtn');
         this.loadBtn = document.getElementById('loadBtn');
-        
+
+        // 导出状态标志
+        this.isExporting = false;
+
         // 绑定事件
         this.bindEvents();
     }
-    
+
     // 导出书签
     exportBookmark() {
-        if (canvasManager) {
-            canvasManager.exportImage();
+        if (canvasManager && !this.isExporting) {
+            // 设置导出标志，防止重复导出
+            this.isExporting = true;
+
+            // 禁用导出按钮
+            if (this.exportBtn) {
+                this.exportBtn.disabled = true;
+            }
+
+            try {
+                // 执行导出
+                canvasManager.exportImage();
+            } catch (error) {
+                console.error('导出失败:', error);
+                alert('导出失败，请查看控制台获取详细信息');
+            } finally {
+                // 延迟重新启用导出功能
+                setTimeout(() => {
+                    this.isExporting = false;
+                    if (this.exportBtn) {
+                        this.exportBtn.disabled = false;
+                    }
+                }, 1000);
+            }
         }
     }
-    
+
     // 保存设置
     saveSettings() {
         if (!layerManager) return;
-        
+
         // 获取所有图层数据
         const data = layerManager.getLayersData();
-        
+
         // 转换为JSON字符串
         const json = JSON.stringify(data, (key, value) => {
             // 跳过图片对象
@@ -39,30 +64,30 @@ class ExportManager {
             }
             return value;
         });
-        
+
         // 保存到本地存储
         localStorage.setItem('bookmarkSettings', json);
-        
+
         // 提示用户
         alert('设置已保存');
     }
-    
+
     // 加载设置
     loadSettings() {
         if (!layerManager) return;
-        
+
         // 从本地存储获取数据
         const json = localStorage.getItem('bookmarkSettings');
-        
+
         if (!json) {
             alert('没有找到保存的设置');
             return;
         }
-        
+
         try {
             // 解析JSON
             const data = JSON.parse(json);
-            
+
             // 处理图片
             for (const id in data) {
                 if (data[id].data.image && typeof data[id].data.image === 'string') {
@@ -71,18 +96,19 @@ class ExportManager {
                     data[id].data.image = img;
                 }
             }
-            
+
             // 设置图层数据
             layerManager.setLayersData(data);
-            
+
             // 更新UI
             if (backgroundManager) backgroundManager.updateUI();
-            if (textManager) textManager.updateUI();
-            if (iconManager) iconManager.updateUI();
-            
+            // 注意：文字和图标功能已移除
+            // if (textManager) textManager.updateUI();
+            // if (iconManager) iconManager.updateUI();
+
             // 重新渲染
             if (canvasManager) canvasManager.render();
-            
+
             // 提示用户
             alert('设置已加载');
         } catch (error) {
@@ -90,19 +116,19 @@ class ExportManager {
             alert('加载设置失败');
         }
     }
-    
+
     // 绑定事件
     bindEvents() {
         // 导出按钮
         this.exportBtn.addEventListener('click', () => {
             this.exportBookmark();
         });
-        
+
         // 保存设置按钮
         this.saveBtn.addEventListener('click', () => {
             this.saveSettings();
         });
-        
+
         // 加载设置按钮
         this.loadBtn.addEventListener('click', () => {
             this.loadSettings();

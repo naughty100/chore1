@@ -44,10 +44,25 @@ class BookmarkEditor {
 
         // 导出按钮事件
         if (this.exportBtn) {
+            // 使用一个标志来防止多次点击导致多次导出
+            let isExporting = false;
+
             this.exportBtn.addEventListener('click', () => {
                 console.log('导出书签');
-                if (canvasManager) {
+                if (canvasManager && !isExporting) {
+                    isExporting = true;
+
+                    // 禁用按钮，防止重复点击
+                    this.exportBtn.disabled = true;
+
+                    // 执行导出
                     canvasManager.exportImage();
+
+                    // 延迟重新启用按钮
+                    setTimeout(() => {
+                        isExporting = false;
+                        this.exportBtn.disabled = false;
+                    }, 1000); // 1秒后重新启用
                 }
             });
         }

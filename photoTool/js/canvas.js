@@ -1,6 +1,7 @@
 /**
  * canvas.js - 书签卡片编辑器的Canvas核心模块
  * 负责Canvas初始化、缩放、坐标系统和基本绘制功能
+ * 支持高清图片处理和DPR适配
  */
 
 // Canvas管理类
@@ -13,6 +14,9 @@ class BookmarkCanvas {
         // 设置标准尺寸
         this.standardWidth = 200;
         this.standardHeight = 600;
+
+        // 获取设备像素比
+        this.dpr = window.devicePixelRatio || 1;
 
         // 缩放比例
         this.scale = 1;
@@ -84,9 +88,20 @@ class BookmarkCanvas {
 
     // 初始化Canvas
     initCanvas() {
-        // 设置Canvas尺寸
-        this.canvas.width = this.standardWidth;
-        this.canvas.height = this.standardHeight;
+        // 设置Canvas尺寸，考虑设备像素比以支持高清显示
+        const displayWidth = this.standardWidth;
+        const displayHeight = this.standardHeight;
+
+        // 设置Canvas的CSS尺寸
+        this.canvas.style.width = `${displayWidth}px`;
+        this.canvas.style.height = `${displayHeight}px`;
+
+        // 设置Canvas的实际尺寸（乘以设备像素比）
+        this.canvas.width = Math.floor(displayWidth * this.dpr);
+        this.canvas.height = Math.floor(displayHeight * this.dpr);
+
+        // 缩放上下文以匹配设备像素比
+        this.ctx.scale(this.dpr, this.dpr);
 
         // 清除Canvas
         this.clear();
@@ -107,7 +122,8 @@ class BookmarkCanvas {
 
     // 清除Canvas
     clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // 考虑DPR缩放后的尺寸
+        this.ctx.clearRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
     }
 
     // 设置缩放比例
@@ -179,6 +195,7 @@ class BookmarkCanvas {
         this.boardGradientAngle.addEventListener('input', (e) => {
             this.gradientAngle = parseInt(e.target.value);
             this.boardGradientAngleValue.textContent = `${this.gradientAngle}°`;
+            console.log(`设置渐变角度: ${this.gradientAngle}°`); // 添加日志
             this.updateBackgroundBoard();
         });
 
@@ -635,10 +652,8 @@ class BookmarkCanvas {
             layerManager.renderLayers(this.ctx);
         }
 
-        // 渲染边框
-        if (borderManager) {
-            borderManager.applyBorderToCanvas(this.ctx);
-        }
+        // 注意：边框功能已移除
+        // 在简化版本中不再需要渲染边框
     }
 
     // 获取Canvas数据URL
@@ -654,11 +669,16 @@ class BookmarkCanvas {
 
         // 使用背景板的实际尺寸
 
-        // 设置导出Canvas的尺寸为背景板的实际尺寸
+        // 设置导出Canvas的尺寸为背景板的实际尺寸，并考虑设备像素比以实现高清导出
         const boardWidth = parseInt(this.boardWidth.value);
         const boardHeight = parseInt(this.boardHeight.value);
-        exportCanvas.width = boardWidth;
-        exportCanvas.height = boardHeight;
+
+        // 应用设备像素比以获得高清输出
+        exportCanvas.width = boardWidth * this.dpr;
+        exportCanvas.height = boardHeight * this.dpr;
+
+        // 缩放上下文以匹配设备像素比
+        ctx.scale(this.dpr, this.dpr);
 
         // 绘制背景板
         if (this.gradientType === 'none') {
@@ -668,16 +688,19 @@ class BookmarkCanvas {
             // 使用提取的颜色创建渐变
             if (this.gradientType === 'linear') {
                 // 线性渐变 - 使用指定角度
+                // 注意：这里需要使用正确的角度值
                 const angleRad = this.gradientAngle * Math.PI / 180;
-                const gradientSize = Math.max(exportCanvas.width, exportCanvas.height);
+                const gradientSize = Math.max(boardWidth, boardHeight) * 1.5; // 增大渐变范围确保覆盖整个背景
 
                 // 计算渐变起点和终点
-                const centerX = exportCanvas.width / 2;
-                const centerY = exportCanvas.height / 2;
+                const centerX = boardWidth / 2;
+                const centerY = boardHeight / 2;
                 const startX = centerX - Math.cos(angleRad) * gradientSize / 2;
                 const startY = centerY - Math.sin(angleRad) * gradientSize / 2;
                 const endX = centerX + Math.cos(angleRad) * gradientSize / 2;
                 const endY = centerY + Math.sin(angleRad) * gradientSize / 2;
+
+                console.log(`渐变角度: ${this.gradientAngle}°, 起点: (${startX}, ${startY}), 终点: (${endX}, ${endY})`);
 
                 const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
 
@@ -693,8 +716,8 @@ class BookmarkCanvas {
             } else {
                 // 径向渐变
                 const gradient = ctx.createRadialGradient(
-                    exportCanvas.width / 2, exportCanvas.height / 2, 0,
-                    exportCanvas.width / 2, exportCanvas.height / 2, exportCanvas.width / 2
+                    boardWidth / 2, boardHeight / 2, 0,
+                    boardWidth / 2, boardHeight / 2, Math.max(boardWidth, boardHeight) / 2
                 );
 
                 // 使用自定义位置
@@ -712,8 +735,8 @@ class BookmarkCanvas {
             ctx.fillStyle = this.boardColor;
         }
 
-        // 填充背景
-        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        // 填充背景 - 注意这里需要使用正确的尺寸（考虑DPR缩放）
+        ctx.fillRect(0, 0, boardWidth, boardHeight);
 
         // 计算书签在背景板中的位置（使用用户设置的位置）
         let bookmarkX, bookmarkY;
@@ -735,7 +758,8 @@ class BookmarkCanvas {
             bookmarkX = this.bookmarkPositionData.x;
         } else {
             // 百分比计算
-            const boardWidth = exportCanvas.width;
+            // 注意：这里需要使用未缩放的尺寸（考虑DPR）
+            // 直接使用上面定义的boardWidth变量，不要重新声明
 
             // 当百分比为0时，表示居中
             if (this.bookmarkPositionData.x === 0) {
@@ -753,7 +777,8 @@ class BookmarkCanvas {
             bookmarkY = this.bookmarkPositionData.y;
         } else {
             // 百分比计算
-            const boardHeight = exportCanvas.height;
+            // 注意：这里需要使用未缩放的尺寸（考虑DPR）
+            // 直接使用上面定义的boardHeight变量，不要重新声明
 
             // 当百分比为0时，表示垂直居中
             if (this.bookmarkPositionData.y === 0) {
@@ -769,22 +794,45 @@ class BookmarkCanvas {
         // 创建临时Canvas来处理缩放
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = scaledWidth;
-        tempCanvas.height = scaledHeight;
+
+        // 设置临时Canvas尺寸，考虑设备像素比
+        tempCanvas.width = scaledWidth * this.dpr;
+        tempCanvas.height = scaledHeight * this.dpr;
+
+        // 缩放上下文以匹配设备像素比
+        tempCtx.scale(this.dpr, this.dpr);
 
         // 在临时Canvas上绘制缩放后的书签
-        tempCtx.drawImage(this.canvas, 0, 0, this.canvas.width, this.canvas.height,
+        tempCtx.drawImage(this.canvas, 0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr,
                           0, 0, scaledWidth, scaledHeight);
 
         // 将缩放后的书签绘制到导出Canvas上
-        ctx.drawImage(tempCanvas, bookmarkX, bookmarkY);
+        // 注意：这里需要考虑DPR缩放
+        ctx.drawImage(tempCanvas,
+                     bookmarkX, bookmarkY,
+                     scaledWidth, scaledHeight);
 
         // 导出为图片
         const dataURL = exportCanvas.toDataURL('image/png');
+
+        // 创建唯一的文件名（使用时间戳）
+        const timestamp = new Date().getTime();
+        const filename = `书签卡片_${timestamp}.png`;
+
+        // 创建下载链接
         const link = document.createElement('a');
-        link.download = '书签卡片.png';
         link.href = dataURL;
+        link.download = filename;
+
+        // 添加到文档中，触发点击，然后移除
+        document.body.appendChild(link);
         link.click();
+
+        // 延迟移除链接元素
+        setTimeout(() => {
+            document.body.removeChild(link);
+            console.log(`导出完成: ${filename}`);
+        }, 100);
     }
 }
 

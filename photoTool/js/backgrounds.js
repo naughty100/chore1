@@ -1,6 +1,7 @@
 /**
  * backgrounds.js - 书签卡片编辑器的背景处理模块
  * 负责处理背景相关的UI交互和背景渲染
+ * 支持高清图片处理和DPR适配
  */
 
 // 背景管理类
@@ -8,6 +9,9 @@ class BackgroundManager {
     constructor() {
         // 获取背景图层
         this.backgroundLayer = null;
+
+        // 获取设备像素比
+        this.dpr = window.devicePixelRatio || 1;
 
         // 背景设置面板
         this.bgTypeRadios = document.getElementsByName('bgType');
@@ -247,13 +251,15 @@ class BackgroundManager {
         const reader = new FileReader();
 
         reader.onload = (e) => {
+            // 创建一个新的Image对象来加载原始图片
             const img = new Image();
 
             img.onload = () => {
+                // 保存原始图片，不进行任何压缩或缩放
                 // 更新背景图层数据
                 const data = this.backgroundLayer.getData();
                 data.image = img;
-                data.originalImage = img; // 保存原始图片
+                data.originalImage = img; // 保存原始图片以便后续裁剪
                 this.backgroundLayer.setData(data);
 
                 // 显示裁剪区域
@@ -263,9 +269,11 @@ class BackgroundManager {
                 this.render();
             };
 
+            // 设置图片源为文件读取结果
             img.src = e.target.result;
         };
 
+        // 以DataURL方式读取文件，保留完整图片数据
         reader.readAsDataURL(file);
     }
 
@@ -547,9 +555,12 @@ class BackgroundManager {
         const cropWidth = this.cropState.cropWidth * scaleX;
         const cropHeight = this.cropState.cropHeight * scaleY;
 
-        // 设置Canvas尺寸
-        canvas.width = cropWidth;
-        canvas.height = cropHeight;
+        // 设置Canvas尺寸，考虑设备像素比以获得高清输出
+        canvas.width = cropWidth * this.dpr;
+        canvas.height = cropHeight * this.dpr;
+
+        // 缩放上下文以匹配设备像素比
+        ctx.scale(this.dpr, this.dpr);
 
         // 绘制裁剪后的图片
         ctx.drawImage(
@@ -646,7 +657,7 @@ class BackgroundManager {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // 设置Canvas尺寸
+        // 设置Canvas尺寸，使用原始图片尺寸以获得更准确的颜色
         canvas.width = data.image.width;
         canvas.height = data.image.height;
 
