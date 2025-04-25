@@ -24,6 +24,16 @@ class BookmarkCanvas {
         this.boardGradientAngle = document.getElementById('boardGradientAngle');
         this.boardGradientAngleValue = document.getElementById('boardGradientAngleValue');
 
+        // 背景板尺寸和比例
+        this.boardRatio = document.getElementById('boardRatio');
+        this.boardWidth = document.getElementById('boardWidth');
+        this.boardHeight = document.getElementById('boardHeight');
+
+        // 书签缩放
+        this.bookmarkScale = document.getElementById('bookmarkScale');
+        this.bookmarkScaleValue = document.getElementById('bookmarkScaleValue');
+        this.currentScale = 100; // 当前缩放百分比
+
         // 渐变位置控制
         this.gradientPos1 = document.getElementById('gradientPos1');
         this.gradientPos1Value = document.getElementById('gradientPos1Value');
@@ -40,6 +50,31 @@ class BookmarkCanvas {
         // 渐变位置
         this.gradientPositions = [0, 50, 100];
 
+        // 书签位置控制
+        this.bookmarkPosition = document.getElementById('bookmarkPosition');
+        this.bookmarkX = document.getElementById('bookmarkX');
+        this.bookmarkY = document.getElementById('bookmarkY');
+        this.bookmarkXUnit = document.getElementById('bookmarkXUnit');
+        this.bookmarkYUnit = document.getElementById('bookmarkYUnit');
+
+        // 书签位置数据
+        this.bookmarkPositionData = {
+            x: 0, // 百分比或像素，0表示居中
+            y: 0, // 百分比或像素，0表示垂直居中
+            xUnit: 'percent', // 'percent' 或 'px'
+            yUnit: 'percent', // 'percent' 或 'px'
+            preset: 'center' // 预设位置
+        };
+
+        // 拖动状态
+        this.dragState = {
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            startBookmarkX: 0,
+            startBookmarkY: 0
+        };
+
         // 初始化Canvas
         this.initCanvas();
 
@@ -55,6 +90,19 @@ class BookmarkCanvas {
 
         // 清除Canvas
         this.clear();
+
+        // 初始化背景板尺寸和书签位置
+        setTimeout(() => {
+            // 初始化背景板尺寸
+            this.updateBoardSize();
+
+            // 初始化书签缩放
+            this.applyBookmarkScale();
+
+            // 初始化书签位置
+            this.updateBookmarkPositionUI();
+            this.updateBookmarkPosition();
+        }, 100);
     }
 
     // 清除Canvas
@@ -166,6 +214,220 @@ class BookmarkCanvas {
                 this.applyExtractedColorsBtn.style.display = 'none';
             }
         });
+
+        // 书签位置预设选择事件
+        this.bookmarkPosition.addEventListener('change', (e) => {
+            this.bookmarkPositionData.preset = e.target.value;
+
+            // 根据预设更新位置
+            if (e.target.value !== 'custom') {
+                this.applyPresetPosition(e.target.value);
+            }
+
+            // 更新UI
+            this.updateBookmarkPositionUI();
+
+            // 更新书签位置
+            this.updateBookmarkPosition();
+        });
+
+        // X位置输入事件
+        this.bookmarkX.addEventListener('input', (e) => {
+            this.bookmarkPositionData.x = parseFloat(e.target.value);
+            this.bookmarkPositionData.preset = 'custom';
+            this.bookmarkPosition.value = 'custom';
+            this.updateBookmarkPosition();
+        });
+
+        // Y位置输入事件
+        this.bookmarkY.addEventListener('input', (e) => {
+            this.bookmarkPositionData.y = parseFloat(e.target.value);
+            this.bookmarkPositionData.preset = 'custom';
+            this.bookmarkPosition.value = 'custom';
+            this.updateBookmarkPosition();
+        });
+
+        // X单位选择事件
+        this.bookmarkXUnit.addEventListener('change', (e) => {
+            this.bookmarkPositionData.xUnit = e.target.value;
+            this.bookmarkPositionData.preset = 'custom';
+            this.bookmarkPosition.value = 'custom';
+            this.updateBookmarkPosition();
+        });
+
+        // Y单位选择事件
+        this.bookmarkYUnit.addEventListener('change', (e) => {
+            this.bookmarkPositionData.yUnit = e.target.value;
+            this.bookmarkPositionData.preset = 'custom';
+            this.bookmarkPosition.value = 'custom';
+            this.updateBookmarkPosition();
+        });
+
+        // 书签拖动事件
+        this.canvas.addEventListener('mousedown', (e) => {
+            // 获取Canvas容器
+            const canvasContainer = document.querySelector('.canvas-container');
+
+            // 获取当前位置
+            const currentLeft = parseInt(canvasContainer.style.left) || 0;
+            const currentTop = parseInt(canvasContainer.style.top) || 0;
+
+            // 设置拖动状态
+            this.dragState.dragging = true;
+            this.dragState.startX = e.clientX;
+            this.dragState.startY = e.clientY;
+            this.dragState.startBookmarkX = currentLeft;
+            this.dragState.startBookmarkY = currentTop;
+
+            // 切换到自定义位置
+            this.bookmarkPositionData.preset = 'custom';
+            this.bookmarkPosition.value = 'custom';
+
+            // 阻止默认事件和冒泡
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // 鼠标移动事件
+        document.addEventListener('mousemove', (e) => {
+            if (!this.dragState.dragging) return;
+
+            // 计算移动距离
+            const deltaX = e.clientX - this.dragState.startX;
+            const deltaY = e.clientY - this.dragState.startY;
+
+            // 获取背景板尺寸
+            const boardElement = document.querySelector('.background-board');
+            const boardWidth = boardElement.offsetWidth;
+            const boardHeight = boardElement.offsetHeight;
+
+            // 计算新位置（像素）
+            const newLeft = this.dragState.startBookmarkX + deltaX;
+            const newTop = this.dragState.startBookmarkY + deltaY;
+
+            // 更新书签位置数据
+            if (this.bookmarkPositionData.xUnit === 'px') {
+                this.bookmarkPositionData.x = newLeft;
+            } else {
+                // 获取当前缩放比例
+                const scaleRatio = this.currentScale / 100;
+
+                // 获取缩放后的书签尺寸
+                const scaledWidth = this.canvas.width * scaleRatio;
+
+                // 计算书签中心点
+                const bookmarkCenterX = newLeft + scaledWidth / 2;
+
+                // 计算背景板中心点
+                const boardCenterX = boardWidth / 2;
+
+                // 计算中心点偏移量
+                const offsetFromCenter = bookmarkCenterX - boardCenterX;
+
+                // 将偏移转换为百分比（相对于背景板宽度的百分比）
+                this.bookmarkPositionData.x = (offsetFromCenter / boardWidth) * 100 * 2; // *2因为我们使用的是-50%到50%的范围
+            }
+
+            if (this.bookmarkPositionData.yUnit === 'px') {
+                this.bookmarkPositionData.y = newTop;
+            } else {
+                // 将像素位置转换为百分比
+                this.bookmarkPositionData.y = (newTop / boardHeight) * 100;
+            }
+
+            // 更新UI
+            this.updateBookmarkPositionUI();
+
+            // 更新书签位置
+            this.updateBookmarkPosition();
+
+            // 阻止默认事件
+            e.preventDefault();
+        });
+
+        // 鼠标释放事件
+        document.addEventListener('mouseup', () => {
+            this.dragState.dragging = false;
+        });
+
+        // 背景板比例选择事件
+        this.boardRatio.addEventListener('change', (e) => {
+            const ratio = e.target.value;
+
+            if (ratio !== 'custom') {
+                // 解析比例
+                const [width, height] = ratio.split(':').map(Number);
+
+                // 保持当前宽度，调整高度
+                const currentWidth = parseInt(this.boardWidth.value);
+                const newHeight = Math.round(currentWidth * height / width);
+
+                // 更新输入框
+                this.boardHeight.value = newHeight;
+
+                // 应用新尺寸
+                this.updateBoardSize();
+            }
+        });
+
+        // 背景板宽度输入事件
+        this.boardWidth.addEventListener('input', (e) => {
+            const width = parseInt(e.target.value);
+
+            // 如果不是自定义比例，则根据比例调整高度
+            if (this.boardRatio.value !== 'custom') {
+                const [ratioWidth, ratioHeight] = this.boardRatio.value.split(':').map(Number);
+                const newHeight = Math.round(width * ratioHeight / ratioWidth);
+                this.boardHeight.value = newHeight;
+            }
+
+            // 切换到自定义比例
+            this.boardRatio.value = 'custom';
+
+            // 应用新尺寸
+            this.updateBoardSize();
+        });
+
+        // 背景板高度输入事件
+        this.boardHeight.addEventListener('input', () => {
+            // 切换到自定义比例
+            this.boardRatio.value = 'custom';
+
+            // 应用新尺寸
+            this.updateBoardSize();
+        });
+
+        // 书签缩放事件
+        this.bookmarkScale.addEventListener('input', (e) => {
+            this.currentScale = parseInt(e.target.value);
+            this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+
+            // 应用缩放
+            this.applyBookmarkScale();
+
+            // 更新书签位置
+            this.updateBookmarkPosition();
+        });
+
+        // 监听背景板大小变化（拖拽调整大小）
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                if (entry.target.classList.contains('background-board')) {
+                    // 更新尺寸输入框
+                    this.boardWidth.value = Math.round(entry.contentRect.width);
+                    this.boardHeight.value = Math.round(entry.contentRect.height);
+
+                    // 切换到自定义比例
+                    this.boardRatio.value = 'custom';
+
+                    // 更新书签位置
+                    this.updateBookmarkPosition();
+                }
+            }
+        });
+
+        // 观察背景板元素
+        resizeObserver.observe(document.querySelector('.background-board'));
     }
 
     // 更新背景板颜色和渐变
@@ -226,6 +488,143 @@ class BookmarkCanvas {
         }
     }
 
+    // 应用预设位置
+    applyPresetPosition(preset) {
+        switch (preset) {
+            case 'center':
+                this.bookmarkPositionData.x = 0; // 水平居中
+                this.bookmarkPositionData.y = 0; // 垂直居中
+                this.bookmarkPositionData.xUnit = 'percent';
+                this.bookmarkPositionData.yUnit = 'percent';
+                break;
+
+            case 'top':
+                this.bookmarkPositionData.x = 0; // 水平居中
+                this.bookmarkPositionData.y = 5; // 靠近顶部
+                this.bookmarkPositionData.xUnit = 'percent';
+                this.bookmarkPositionData.yUnit = 'percent';
+                break;
+
+            case 'bottom':
+                this.bookmarkPositionData.x = 0; // 水平居中
+                this.bookmarkPositionData.y = 70; // 靠近底部
+                this.bookmarkPositionData.xUnit = 'percent';
+                this.bookmarkPositionData.yUnit = 'percent';
+                break;
+
+            case 'left':
+                this.bookmarkPositionData.x = -30; // 向左偏移
+                this.bookmarkPositionData.y = 0; // 垂直居中
+                this.bookmarkPositionData.xUnit = 'percent';
+                this.bookmarkPositionData.yUnit = 'percent';
+                break;
+
+            case 'right':
+                this.bookmarkPositionData.x = 30; // 向右偏移
+                this.bookmarkPositionData.y = 0; // 垂直居中
+                this.bookmarkPositionData.xUnit = 'percent';
+                this.bookmarkPositionData.yUnit = 'percent';
+                break;
+        }
+    }
+
+    // 更新书签位置UI
+    updateBookmarkPositionUI() {
+        // 更新输入框
+        this.bookmarkX.value = this.bookmarkPositionData.x;
+        this.bookmarkY.value = this.bookmarkPositionData.y;
+
+        // 更新单位选择
+        this.bookmarkXUnit.value = this.bookmarkPositionData.xUnit;
+        this.bookmarkYUnit.value = this.bookmarkPositionData.yUnit;
+    }
+
+    // 更新背景板尺寸
+    updateBoardSize() {
+        const boardElement = document.querySelector('.background-board');
+        const width = parseInt(this.boardWidth.value);
+        const height = parseInt(this.boardHeight.value);
+
+        // 应用新尺寸
+        boardElement.style.width = `${width}px`;
+        boardElement.style.height = `${height}px`;
+
+        // 更新书签位置
+        this.updateBookmarkPosition();
+    }
+
+    // 应用书签缩放
+    applyBookmarkScale() {
+        // 更新书签位置，考虑缩放因素
+        this.updateBookmarkPosition();
+    }
+
+    // 更新书签位置
+    updateBookmarkPosition() {
+        const canvasContainer = document.querySelector('.canvas-container');
+        const boardElement = document.querySelector('.background-board');
+
+        // 获取当前缩放比例
+        const scaleRatio = this.currentScale / 100;
+
+        // 重要：设置transform-origin为左上角，这样缩放不会影响位置计算
+        canvasContainer.style.transformOrigin = 'top left';
+
+        // 应用缩放
+        canvasContainer.style.transform = `scale(${scaleRatio})`;
+
+        // 计算位置
+        let x, y;
+
+        // 获取原始书签尺寸（未缩放）
+        const originalWidth = this.canvas.width;
+        const originalHeight = this.canvas.height;
+
+        // 获取缩放后的书签尺寸
+        const scaledWidth = originalWidth * scaleRatio;
+        const scaledHeight = originalHeight * scaleRatio;
+
+        // X位置计算
+        if (this.bookmarkPositionData.xUnit === 'px') {
+            x = this.bookmarkPositionData.x;
+        } else {
+            // 百分比计算
+            const boardWidth = boardElement.offsetWidth;
+
+            // 当百分比为0时，表示居中
+            if (this.bookmarkPositionData.x === 0) {
+                x = (boardWidth - scaledWidth) / 2;
+            } else {
+                // 计算百分比位置
+                const percentX = this.bookmarkPositionData.x;
+                // 将百分比转换为相对于背景板的位置
+                x = (boardWidth * (50 + percentX) / 100) - (scaledWidth / 2);
+            }
+        }
+
+        // Y位置计算
+        if (this.bookmarkPositionData.yUnit === 'px') {
+            y = this.bookmarkPositionData.y;
+        } else {
+            // 百分比计算
+            const boardHeight = boardElement.offsetHeight;
+
+            // 当百分比为0时，表示垂直居中
+            if (this.bookmarkPositionData.y === 0) {
+                y = (boardHeight - scaledHeight) / 2;
+            } else {
+                // 计算百分比位置
+                const percentY = this.bookmarkPositionData.y;
+                // 将百分比转换为相对于背景板的位置
+                y = (boardHeight * percentY / 100);
+            }
+        }
+
+        // 应用位置 - 使用绝对定位
+        canvasContainer.style.left = `${x}px`;
+        canvasContainer.style.top = `${y}px`;
+    }
+
     // 渲染Canvas
     render() {
         // 清除Canvas
@@ -253,13 +652,13 @@ class BookmarkCanvas {
         const exportCanvas = document.createElement('canvas');
         const ctx = exportCanvas.getContext('2d');
 
-        // 获取背景板元素
-        const boardElement = document.querySelector('.background-board');
-        const boardStyle = getComputedStyle(boardElement);
+        // 使用背景板的实际尺寸
 
-        // 设置导出Canvas的尺寸为背景板的尺寸
-        exportCanvas.width = parseInt(boardStyle.width);
-        exportCanvas.height = parseInt(boardStyle.height);
+        // 设置导出Canvas的尺寸为背景板的实际尺寸
+        const boardWidth = parseInt(this.boardWidth.value);
+        const boardHeight = parseInt(this.boardHeight.value);
+        exportCanvas.width = boardWidth;
+        exportCanvas.height = boardHeight;
 
         // 绘制背景板
         if (this.gradientType === 'none') {
@@ -316,25 +715,69 @@ class BookmarkCanvas {
         // 填充背景
         ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-        // 计算书签在背景板中的位置（水平居中，垂直有上下边距）
-        const bookmarkX = (exportCanvas.width - this.canvas.width) / 2;
+        // 计算书签在背景板中的位置（使用用户设置的位置）
+        let bookmarkX, bookmarkY;
 
-        // 添加上下边距，使书签在背景板中垂直居中，但留有一定边距
-        const verticalMargin = exportCanvas.height * 0.15; // 上下边距各为背景板高度的15%
-        const availableHeight = exportCanvas.height - (verticalMargin * 2); // 可用高度
+        // 获取当前缩放比例
+        const scaleRatio = this.currentScale / 100;
 
-        // 计算书签Y位置
-        let bookmarkY;
+        // 获取原始书签尺寸（未缩放）
+        const originalWidth = this.canvas.width;
+        const originalHeight = this.canvas.height;
 
-        // 如果书签高度小于可用高度，则居中放置；否则，使用固定边距
-        if (this.canvas.height <= availableHeight) {
-            bookmarkY = (exportCanvas.height - this.canvas.height) / 2; // 垂直居中
+        // 获取缩放后的书签尺寸
+        const scaledWidth = originalWidth * scaleRatio;
+        const scaledHeight = originalHeight * scaleRatio;
+
+        // 使用与updateBookmarkPosition完全相同的位置计算逻辑
+        // X位置计算
+        if (this.bookmarkPositionData.xUnit === 'px') {
+            bookmarkX = this.bookmarkPositionData.x;
         } else {
-            bookmarkY = verticalMargin; // 使用固定上边距
+            // 百分比计算
+            const boardWidth = exportCanvas.width;
+
+            // 当百分比为0时，表示居中
+            if (this.bookmarkPositionData.x === 0) {
+                bookmarkX = (boardWidth - scaledWidth) / 2;
+            } else {
+                // 计算百分比位置
+                const percentX = this.bookmarkPositionData.x;
+                // 将百分比转换为相对于背景板的位置
+                bookmarkX = (boardWidth * (50 + percentX) / 100) - (scaledWidth / 2);
+            }
         }
 
-        // 绘制书签
-        ctx.drawImage(this.canvas, bookmarkX, bookmarkY);
+        // Y位置计算
+        if (this.bookmarkPositionData.yUnit === 'px') {
+            bookmarkY = this.bookmarkPositionData.y;
+        } else {
+            // 百分比计算
+            const boardHeight = exportCanvas.height;
+
+            // 当百分比为0时，表示垂直居中
+            if (this.bookmarkPositionData.y === 0) {
+                bookmarkY = (boardHeight - scaledHeight) / 2;
+            } else {
+                // 计算百分比位置
+                const percentY = this.bookmarkPositionData.y;
+                // 将百分比转换为相对于背景板的位置
+                bookmarkY = (boardHeight * percentY / 100);
+            }
+        }
+
+        // 创建临时Canvas来处理缩放
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+
+        // 在临时Canvas上绘制缩放后的书签
+        tempCtx.drawImage(this.canvas, 0, 0, this.canvas.width, this.canvas.height,
+                          0, 0, scaledWidth, scaledHeight);
+
+        // 将缩放后的书签绘制到导出Canvas上
+        ctx.drawImage(tempCanvas, bookmarkX, bookmarkY);
 
         // 导出为图片
         const dataURL = exportCanvas.toDataURL('image/png');
