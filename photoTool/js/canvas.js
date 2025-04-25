@@ -667,7 +667,11 @@ class BookmarkCanvas {
 
         // 创建一个新的Canvas来绘制完整的书签（包括背景板）
         const exportCanvas = document.createElement('canvas');
-        const ctx = exportCanvas.getContext('2d');
+        const ctx = exportCanvas.getContext('2d', { willReadFrequently: true });
+
+        // 启用图像平滑，使模糊效果更好
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         // 使用背景板的实际尺寸
 
@@ -810,7 +814,18 @@ class BookmarkCanvas {
 
         // 如果启用了阴影，先绘制阴影
         if (shadowManager && shadowManager.getShadowSettings().enabled) {
+            console.log('Canvas: 应用阴影到导出图片');
+
+            // 保存当前状态
+            ctx.save();
+
+            // 先绘制阴影
             shadowManager.applyShadowToCanvas(ctx, bookmarkX, bookmarkY, scaledWidth, scaledHeight);
+
+            // 恢复状态，确保阴影不会影响后续绘制
+            ctx.restore();
+        } else {
+            console.log('Canvas: 导出时未应用阴影');
         }
 
         // 将缩放后的书签绘制到导出Canvas上
