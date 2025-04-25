@@ -672,31 +672,12 @@ class BookmarkCanvas {
         // 清除Canvas
         this.clear();
 
-        // 如果存在书签管理器，渲染当前选中的书签
-        if (bookmarkManager) {
-            const selectedBookmark = bookmarkManager.getSelectedBookmark();
-            if (selectedBookmark) {
-                // 获取书签在背景板中的位置
-                const boardWidth = this.width;
-                const boardHeight = this.height;
-                const { x, y } = selectedBookmark.calculatePosition(boardWidth, boardHeight);
+        // 不再需要在主Canvas上渲染书签，因为书签现在是DOM元素
+        // 只需要在导出时渲染
 
-                // 获取缩放后的尺寸
-                const { width, height } = selectedBookmark.getScaledDimensions();
-
-                // 绘制选中书签的内容到主Canvas
-                this.ctx.drawImage(selectedBookmark.canvas, x, y, width, height);
-            } else {
-                // 如果没有选中书签，渲染默认图层
-                if (layerManager) {
-                    layerManager.renderLayers(this.ctx);
-                }
-            }
-        } else {
-            // 兼容旧版本，渲染图层
-            if (layerManager) {
-                layerManager.renderLayers(this.ctx);
-            }
+        // 兼容旧版本，渲染图层
+        if (layerManager) {
+            layerManager.renderLayers(this.ctx);
         }
     }
 
@@ -711,8 +692,16 @@ class BookmarkCanvas {
         // 更新缩放UI
         this.currentScale = bookmark.scale;
 
+        // 确保书签位置正确
+        if (bookmark.position.preset === 'center') {
+            bookmark.position.x = 0;
+            bookmark.position.y = 0;
+        }
+
         // 重新渲染Canvas
         this.render();
+
+        console.log(`Canvas: 更新书签UI，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
     }
 
     // 更新书签位置

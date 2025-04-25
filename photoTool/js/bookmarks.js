@@ -28,19 +28,47 @@ class Bookmark {
             cropInfo: null         // 裁剪信息
         };
 
-        this.canvas = document.createElement('canvas');
-        this.ctx = this.canvas.getContext('2d');
+        // 创建DOM元素
+        this.element = document.createElement('div');
+        this.element.className = 'bookmark-item-canvas';
+        this.element.id = `bookmark-canvas-${id}`;
 
-        // 设置Canvas尺寸
+        // 创建Canvas元素（用于渲染书签内容）
+        this.canvas = document.createElement('canvas');
         this.canvas.width = this.width;
         this.canvas.height = this.height;
+        this.ctx = this.canvas.getContext('2d');
+
+        // 将Canvas添加到DOM元素中
+        this.element.appendChild(this.canvas);
+
+        // 设置DOM元素的初始样式
+        this.element.style.position = 'absolute';
+        this.element.style.width = `${this.width}px`;
+        this.element.style.height = `${this.height}px`;
+
+        // 确保位置设置为居中
+        this.position.preset = 'center';
+        this.position.x = 0;
+        this.position.y = 0;
 
         // 初始化Canvas（创建空白书签）
         this.initCanvas();
+
+        // 添加点击事件，用于选择书签
+        this.element.addEventListener('click', () => {
+            // 触发自定义事件，通知书签被点击
+            const event = new CustomEvent('bookmark-clicked', { detail: { id: this.id } });
+            document.dispatchEvent(event);
+        });
     }
 
     // 初始化Canvas（创建空白书签）
     initCanvas() {
+        // 确保Canvas尺寸正确
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+
         // 清除Canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -48,13 +76,25 @@ class Bookmark {
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        console.log(`初始化书签 ${this.id} 的Canvas，尺寸: ${this.canvas.width}x${this.canvas.height}`);
+
         // 如果有背景图片，绘制背景图片
-        this.drawBackgroundImage();
+        if (this.background.image) {
+            console.log(`书签 ${this.id} 有背景图片，准备绘制，图片尺寸: ${this.background.image.width}x${this.background.image.height}`);
+            this.drawBackgroundImage();
+        } else {
+            console.log(`书签 ${this.id} 没有背景图片`);
+        }
     }
 
     // 绘制背景图片
     drawBackgroundImage() {
-        if (!this.background.image) return;
+        if (!this.background.image) {
+            console.log(`书签 ${this.id}: 没有背景图片`);
+            return;
+        }
+
+        console.log(`书签 ${this.id}: 绘制背景图片，尺寸: ${this.background.image.width}x${this.background.image.height}`);
 
         // 保存当前状态
         this.ctx.save();
@@ -91,6 +131,7 @@ class Bookmark {
                 }
 
                 this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                console.log(`书签 ${this.id}: 绘制背景图片 (cover), 位置: (${drawX}, ${drawY}), 尺寸: ${drawWidth}x${drawHeight}`);
             } else if (this.background.imageFit === 'contain') {
                 // 包含（保持比例，可能留白）
                 const imgRatio = img.width / img.height;
@@ -113,21 +154,55 @@ class Bookmark {
                 }
 
                 this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                console.log(`书签 ${this.id}: 绘制背景图片 (contain), 位置: (${drawX}, ${drawY}), 尺寸: ${drawWidth}x${drawHeight}`);
             } else {
                 // 居中显示（原始大小）
                 const drawX = (canvasWidth - img.width) / 2;
                 const drawY = (canvasHeight - img.height) / 2;
                 this.ctx.drawImage(img, drawX, drawY);
+                console.log(`书签 ${this.id}: 绘制背景图片 (center), 位置: (${drawX}, ${drawY}), 尺寸: ${img.width}x${img.height}`);
             }
         } else {
             // 创建图案
             const pattern = this.ctx.createPattern(img, this.background.imageRepeat);
             this.ctx.fillStyle = pattern;
             this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            console.log(`书签 ${this.id}: 绘制背景图片 (pattern), 平铺方式: ${this.background.imageRepeat}`);
         }
 
         // 恢复状态
         this.ctx.restore();
+    }
+
+    // 设置书签位置
+    setPosition(boardWidth, boardHeight) {
+        // 获取原始尺寸（不考虑缩放）
+        const originalWidth = this.width;
+        const originalHeight = this.height;
+
+        // 计算位置（不考虑缩放）
+        const { x, y } = this.calculatePosition(boardWidth, boardHeight);
+
+        // 更新DOM元素样式
+        this.element.style.left = `${x}px`;
+        this.element.style.top = `${y}px`;
+        this.element.style.width = `${originalWidth}px`;
+        this.element.style.height = `${originalHeight}px`;
+
+        // 设置缩放，使用transform-origin: center center确保从中心缩放
+        this.element.style.transform = `scale(${this.scale / 100})`;
+        this.element.style.transformOrigin = 'center center';
+
+        console.log(`设置书签 ${this.id} 位置: (${x}, ${y}), 原始尺寸: ${originalWidth}x${originalHeight}, 缩放: ${this.scale}%`);
+    }
+
+    // 设置选中状态
+    setSelected(selected) {
+        if (selected) {
+            this.element.classList.add('selected');
+        } else {
+            this.element.classList.remove('selected');
+        }
     }
 
     // 获取缩放后的尺寸
@@ -139,60 +214,22 @@ class Bookmark {
         };
     }
 
-    // 计算书签在背景板中的位置
-    calculatePosition(boardWidth, boardHeight) {
-        // 获取缩放后的尺寸
-        const { width, height } = this.getScaledDimensions();
-
-        // 计算X位置
-        let x;
-        if (this.position.xUnit === 'px') {
-            x = this.position.x;
-        } else {
-            // 百分比计算
-            if (this.position.x === 0) {
-                // 居中
-                x = (boardWidth - width) / 2;
-            } else {
-                // 计算百分比位置
-                const percentX = this.position.x;
-                // 将百分比转换为相对于背景板的位置
-                x = (boardWidth * (50 + percentX) / 100) - (width / 2);
-            }
-        }
-
-        // 计算Y位置
-        let y;
-        if (this.position.yUnit === 'px') {
-            y = this.position.y;
-        } else {
-            // 百分比计算
-            if (this.position.y === 0) {
-                // 垂直居中
-                y = (boardHeight - height) / 2;
-            } else {
-                // 计算百分比位置
-                const percentY = this.position.y;
-                // 将百分比转换为相对于背景板的位置
-                y = (boardHeight * percentY / 100);
-            }
-        }
-
-        return { x, y };
-    }
-
-    // 渲染书签到指定上下文
-    render(ctx, x, y, width, height) {
-        // 绘制书签内容
-        ctx.drawImage(this.canvas, x, y, width, height);
-    }
-
 
 
     // 计算在背景板中的位置
     calculatePosition(boardWidth, boardHeight) {
-        const { width, height } = this.getScaledDimensions();
+        // 使用原始尺寸，不考虑缩放
+        const width = this.width;
+        const height = this.height;
         let x, y;
+
+        // 检查预设位置
+        if (this.position.preset === 'center') {
+            // 居中显示
+            x = (boardWidth - width) / 2;
+            y = (boardHeight - height) / 2;
+            return { x, y };
+        }
 
         // X位置计算
         if (this.position.xUnit === 'px') {
@@ -272,6 +309,8 @@ class Bookmark {
     // 渲染书签到指定的上下文
     render(ctx, x, y, width, height) {
         ctx.drawImage(this.canvas, x, y, width, height);
+
+        console.log(`渲染书签 ${this.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
     }
 }
 
@@ -290,11 +329,38 @@ class BookmarkManager {
         this.bookmarkSpacingInput = document.getElementById('bookmarkSpacing');
         this.bookmarkSpacingValue = document.getElementById('bookmarkSpacingValue');
 
+        // 获取背景板容器
+        this.boardContainer = document.querySelector('.background-board');
+
+        // 创建书签容器
+        this.bookmarksContainer = document.createElement('div');
+        this.bookmarksContainer.className = 'bookmarks-container';
+        this.bookmarksContainer.style.position = 'relative';
+        this.bookmarksContainer.style.width = '100%';
+        this.bookmarksContainer.style.height = '100%';
+
+        // 将书签容器添加到背景板
+        if (this.boardContainer) {
+            this.boardContainer.appendChild(this.bookmarksContainer);
+        }
+
+        // 监听书签点击事件
+        document.addEventListener('bookmark-clicked', (e) => {
+            const clickedId = e.detail.id;
+            const index = this.bookmarks.findIndex(bookmark => bookmark.id === clickedId);
+            if (index !== -1) {
+                this.selectBookmark(index);
+            }
+        });
+
         // 绑定事件
         this.bindEvents();
 
         // 创建默认书签
         this.addBookmark();
+
+        // 选择第一个书签
+        this.selectBookmark(0);
     }
 
     // 绑定事件
@@ -467,6 +533,8 @@ class BookmarkManager {
             return;
         }
 
+        console.log(`为书签 ${bookmark.id} 加载背景图片: ${file.name}`);
+
         const reader = new FileReader();
 
         reader.onload = (e) => {
@@ -474,9 +542,19 @@ class BookmarkManager {
             const img = new Image();
 
             img.onload = () => {
+                console.log(`图片加载完成，尺寸: ${img.width}x${img.height}`);
+
                 // 保存原始图片，不进行任何压缩或缩放
                 bookmark.background.image = img;
                 bookmark.background.originalImage = img; // 保存原始图片以便后续裁剪
+
+                // 设置默认图片设置
+                bookmark.background.imageRepeat = 'no-repeat';
+                bookmark.background.imageFit = 'cover';
+                bookmark.background.imageOpacity = 100;
+
+                // 更新UI
+                this.updateBackgroundSettingsUI(bookmark);
 
                 // 显示裁剪区域
                 this.showImageCropArea(img);
@@ -490,10 +568,17 @@ class BookmarkManager {
                 // 重新渲染书签
                 bookmark.initCanvas();
 
-                // 通知Canvas管理器重新渲染
-                if (this.canvasManager) {
-                    this.canvasManager.render();
+                // 获取背景板尺寸
+                let boardWidth = 400;
+                let boardHeight = 600;
+
+                if (this.boardContainer) {
+                    boardWidth = this.boardContainer.clientWidth;
+                    boardHeight = this.boardContainer.clientHeight;
                 }
+
+                // 更新书签位置
+                bookmark.setPosition(boardWidth, boardHeight);
             };
 
             // 设置图片源为文件读取结果
@@ -714,6 +799,8 @@ class BookmarkManager {
         const cropWidth = (selectionWidth / previewWidth) * originalWidth;
         const cropHeight = (selectionHeight / previewHeight) * originalHeight;
 
+        console.log(`裁剪书签 ${bookmark.id} 的背景图片，裁剪区域: (${cropX}, ${cropY}, ${cropWidth}, ${cropHeight})`);
+
         // 创建Canvas进行裁剪
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -732,6 +819,8 @@ class BookmarkManager {
         // 创建新图片
         const croppedImg = new Image();
         croppedImg.onload = () => {
+            console.log(`裁剪后的图片加载完成，尺寸: ${croppedImg.width}x${croppedImg.height}`);
+
             // 更新书签背景图片
             bookmark.background.image = croppedImg;
 
@@ -760,10 +849,17 @@ class BookmarkManager {
             // 重新渲染书签
             bookmark.initCanvas();
 
-            // 通知Canvas管理器重新渲染
-            if (this.canvasManager) {
-                this.canvasManager.render();
+            // 获取背景板尺寸
+            let boardWidth = 400;
+            let boardHeight = 600;
+
+            if (this.boardContainer) {
+                boardWidth = this.boardContainer.clientWidth;
+                boardHeight = this.boardContainer.clientHeight;
             }
+
+            // 更新书签位置
+            bookmark.setPosition(boardWidth, boardHeight);
         };
 
         croppedImg.src = canvas.toDataURL('image/png');
@@ -818,13 +914,26 @@ class BookmarkManager {
             }
         }
 
+        console.log(`更新书签 ${bookmark.id} 的图片设置:`, {
+            repeat: bookmark.background.imageRepeat,
+            fit: bookmark.background.imageFit,
+            opacity: bookmark.background.imageOpacity
+        });
+
         // 重新渲染书签
         bookmark.initCanvas();
 
-        // 通知Canvas管理器重新渲染
-        if (this.canvasManager) {
-            this.canvasManager.render();
+        // 获取背景板尺寸
+        let boardWidth = 400;
+        let boardHeight = 600;
+
+        if (this.boardContainer) {
+            boardWidth = this.boardContainer.clientWidth;
+            boardHeight = this.boardContainer.clientHeight;
         }
+
+        // 更新书签位置
+        bookmark.setPosition(boardWidth, boardHeight);
     }
 
     // 从图片提取颜色
@@ -996,10 +1105,28 @@ class BookmarkManager {
     addBookmark() {
         const id = `bookmark_${this.bookmarks.length + 1}`;
         const bookmark = new Bookmark(id);
+
+        // 确保位置设置为居中
+        bookmark.position.preset = 'center';
+        bookmark.position.x = 0;
+        bookmark.position.y = 0;
+
+        // 将书签DOM元素添加到书签容器
+        if (this.bookmarksContainer) {
+            this.bookmarksContainer.appendChild(bookmark.element);
+        }
+
         this.bookmarks.push(bookmark);
 
         // 初始化书签Canvas
         bookmark.initCanvas();
+
+        // 设置书签位置
+        if (this.boardContainer) {
+            const boardWidth = this.boardContainer.clientWidth;
+            const boardHeight = this.boardContainer.clientHeight;
+            bookmark.setPosition(boardWidth, boardHeight);
+        }
 
         // 更新布局
         this.updateLayout();
@@ -1007,10 +1134,7 @@ class BookmarkManager {
         // 更新UI
         this.updateBookmarkList();
 
-        // 通知Canvas管理器重新渲染
-        if (this.canvasManager) {
-            this.canvasManager.render();
-        }
+        console.log(`添加新书签 ${id}，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
 
         return bookmark;
     }
@@ -1018,6 +1142,15 @@ class BookmarkManager {
     // 移除书签
     removeBookmark(index) {
         if (index >= 0 && index < this.bookmarks.length) {
+            // 获取要移除的书签
+            const bookmark = this.bookmarks[index];
+
+            // 从DOM中移除书签元素
+            if (bookmark.element && bookmark.element.parentNode) {
+                bookmark.element.parentNode.removeChild(bookmark.element);
+            }
+
+            // 从数组中移除书签
             this.bookmarks.splice(index, 1);
 
             // 更新选中的书签
@@ -1032,6 +1165,8 @@ class BookmarkManager {
 
             // 更新UI
             this.updateBookmarkList();
+
+            console.log(`移除书签 ${bookmark.id}`);
         }
     }
 
@@ -1062,6 +1197,12 @@ class BookmarkManager {
     // 选择书签
     selectBookmark(index) {
         if (index >= 0 && index < this.bookmarks.length) {
+            // 取消之前选中书签的选中状态
+            if (this.selectedBookmarkIndex >= 0 && this.selectedBookmarkIndex < this.bookmarks.length) {
+                this.bookmarks[this.selectedBookmarkIndex].setSelected(false);
+            }
+
+            // 更新选中的书签索引
             this.selectedBookmarkIndex = index;
 
             // 更新UI
@@ -1070,22 +1211,32 @@ class BookmarkManager {
             // 获取选中的书签
             const bookmark = this.bookmarks[index];
 
+            // 设置当前书签为选中状态
+            bookmark.setSelected(true);
+
+            // 确保书签位置设置正确
+            if (bookmark.position.preset === 'center') {
+                bookmark.position.x = 0;
+                bookmark.position.y = 0;
+            }
+
             // 更新背景设置UI
             this.updateBackgroundSettingsUI(bookmark);
 
             // 通知Canvas管理器更新UI
             if (this.canvasManager) {
                 this.canvasManager.updateBookmarkUI(bookmark);
-
-                // 重新渲染Canvas以显示选中的书签
-                this.canvasManager.render();
             }
+
+            console.log(`已选择书签 ${index + 1}，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
         }
     }
 
     // 更新背景设置UI
     updateBackgroundSettingsUI(bookmark) {
         if (!bookmark) return;
+
+        console.log(`更新书签 ${bookmark.id} 的背景设置UI`);
 
         // 更新书签缩放比例
         const bookmarkScale = document.getElementById('bookmarkScale');
@@ -1101,14 +1252,16 @@ class BookmarkManager {
 
         // 更新图片平铺方式
         const imageRepeatSelect = document.getElementById('imageRepeat');
-        if (imageRepeatSelect) {
+        if (imageRepeatSelect && bookmark.background.imageRepeat) {
             imageRepeatSelect.value = bookmark.background.imageRepeat;
+            console.log(`设置平铺方式: ${bookmark.background.imageRepeat}`);
         }
 
         // 更新图片适应方式
         const imageFitSelect = document.getElementById('imageFit');
-        if (imageFitSelect) {
+        if (imageFitSelect && bookmark.background.imageFit) {
             imageFitSelect.value = bookmark.background.imageFit;
+            console.log(`设置适应方式: ${bookmark.background.imageFit}`);
         }
 
         // 更新图片不透明度
@@ -1121,6 +1274,8 @@ class BookmarkManager {
             if (imageOpacityValue) {
                 imageOpacityValue.textContent = `${bookmark.background.imageOpacity}%`;
             }
+
+            console.log(`设置不透明度: ${bookmark.background.imageOpacity}%`);
         }
 
         // 显示/隐藏重新裁剪按钮
@@ -1174,14 +1329,24 @@ class BookmarkManager {
             this.applyVerticalLayout();
         }
 
-        // 更新每个书签的Canvas
-        for (const bookmark of this.bookmarks) {
-            bookmark.initCanvas();
+        // 获取背景板尺寸
+        let boardWidth = 400;
+        let boardHeight = 600;
+
+        if (this.boardContainer) {
+            boardWidth = this.boardContainer.clientWidth;
+            boardHeight = this.boardContainer.clientHeight;
+
+            console.log(`背景板尺寸: ${boardWidth}x${boardHeight}`);
         }
 
-        // 通知Canvas管理器重新渲染
-        if (this.canvasManager) {
-            this.canvasManager.render();
+        // 更新每个书签的Canvas和位置
+        for (const bookmark of this.bookmarks) {
+            // 更新Canvas内容
+            bookmark.initCanvas();
+
+            // 更新DOM元素位置
+            bookmark.setPosition(boardWidth, boardHeight);
         }
     }
 
@@ -1429,6 +1594,23 @@ class BookmarkManager {
         this.bookmarks[7].position.y = 60;
         this.bookmarks[7].position.xUnit = 'percent';
         this.bookmarks[7].position.yUnit = 'percent';
+    }
+
+    // 渲染所有书签到导出Canvas
+    renderToExportCanvas(ctx, boardWidth, boardHeight) {
+        // 遍历所有书签
+        for (const bookmark of this.bookmarks) {
+            // 计算书签在背景板中的位置
+            const { x, y } = bookmark.calculatePosition(boardWidth, boardHeight);
+
+            // 获取缩放后的尺寸
+            const { width, height } = bookmark.getScaledDimensions();
+
+            // 绘制书签内容到导出Canvas
+            bookmark.render(ctx, x, y, width, height);
+
+            console.log(`导出书签 ${bookmark.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
+        }
     }
 
     // 应用网格布局
