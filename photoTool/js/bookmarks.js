@@ -14,8 +14,7 @@ class Bookmark {
             x: 0, // 百分比或像素，0表示居中
             y: 0, // 百分比或像素，0表示垂直居中
             xUnit: 'percent', // 'percent' 或 'px'
-            yUnit: 'percent', // 'percent' 或 'px'
-            preset: 'center' // 预设位置
+            yUnit: 'percent' // 'percent' 或 'px'
         };
 
         // 背景图片设置
@@ -52,8 +51,7 @@ class Bookmark {
         this.element.style.width = `${this.width}px`;
         this.element.style.height = `${this.height}px`;
 
-        // 确保位置设置为居中
-        this.position.preset = 'center';
+        // 默认位置设置
         this.position.x = 0;
         this.position.y = 0;
 
@@ -280,14 +278,6 @@ class Bookmark {
         const height = this.height;
         let x, y;
 
-        // 检查预设位置
-        if (this.position.preset === 'center') {
-            // 居中显示
-            x = (boardWidth - width) / 2;
-            y = (boardHeight - height) / 2;
-            return { x, y };
-        }
-
         // X位置计算
         if (this.position.xUnit === 'px') {
             x = this.position.x;
@@ -323,45 +313,7 @@ class Bookmark {
         return { x, y };
     }
 
-    // 应用预设位置
-    applyPresetPosition(preset) {
-        switch (preset) {
-            case 'center':
-                this.position.x = 0; // 水平居中
-                this.position.y = 0; // 垂直居中
-                this.position.xUnit = 'percent';
-                this.position.yUnit = 'percent';
-                break;
 
-            case 'top':
-                this.position.x = 0; // 水平居中
-                this.position.y = 5; // 靠近顶部
-                this.position.xUnit = 'percent';
-                this.position.yUnit = 'percent';
-                break;
-
-            case 'bottom':
-                this.position.x = 0; // 水平居中
-                this.position.y = 70; // 靠近底部
-                this.position.xUnit = 'percent';
-                this.position.yUnit = 'percent';
-                break;
-
-            case 'left':
-                this.position.x = -30; // 向左偏移
-                this.position.y = 0; // 垂直居中
-                this.position.xUnit = 'percent';
-                this.position.yUnit = 'percent';
-                break;
-
-            case 'right':
-                this.position.x = 30; // 向右偏移
-                this.position.y = 0; // 垂直居中
-                this.position.xUnit = 'percent';
-                this.position.yUnit = 'percent';
-                break;
-        }
-    }
 
     // 渲染书签到指定的上下文（用于导出）
     render(ctx, x, y, width, height) {
@@ -381,14 +333,10 @@ class BookmarkManager {
         this.canvasManager = canvasManager;
         this.bookmarks = [];
         this.selectedBookmarkIndex = -1;
-        this.spacing = 20; // 书签之间的间距（像素）
-        this.layoutType = 'auto'; // 布局类型：auto, grid, horizontal, vertical, custom
 
         // 初始化UI元素
         this.bookmarkCountSelect = document.getElementById('bookmarkCount');
         this.bookmarkListContainer = document.getElementById('bookmarkList');
-        this.bookmarkSpacingInput = document.getElementById('bookmarkSpacing');
-        this.bookmarkSpacingValue = document.getElementById('bookmarkSpacingValue');
 
         // 获取背景板容器
         this.boardContainer = document.querySelector('.background-board');
@@ -434,14 +382,7 @@ class BookmarkManager {
             });
         }
 
-        // 书签间距调整事件
-        if (this.bookmarkSpacingInput) {
-            this.bookmarkSpacingInput.addEventListener('input', (e) => {
-                this.spacing = parseInt(e.target.value);
-                this.bookmarkSpacingValue.textContent = `${this.spacing}px`;
-                this.updateLayout();
-            });
-        }
+
 
         // 添加书签按钮事件
         const addBookmarkBtn = document.getElementById('addBookmarkBtn');
@@ -1167,10 +1108,7 @@ class BookmarkManager {
         const id = `bookmark_${this.bookmarks.length + 1}`;
         const bookmark = new Bookmark(id);
 
-        // 确保位置设置为居中
-        bookmark.position.preset = 'center';
-        bookmark.position.x = 0;
-        bookmark.position.y = 0;
+        // 初始位置设置 - 将在updateLayout中更新
 
         // 将书签DOM元素添加到书签容器
         if (this.bookmarksContainer) {
@@ -1195,7 +1133,7 @@ class BookmarkManager {
         // 更新UI
         this.updateBookmarkList();
 
-        console.log(`添加新书签 ${id}，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
+        console.log(`添加新书签 ${id}，位置: (${bookmark.position.x}, ${bookmark.position.y})`);
 
         return bookmark;
     }
@@ -1275,11 +1213,7 @@ class BookmarkManager {
             // 设置当前书签为选中状态
             bookmark.setSelected(true);
 
-            // 确保书签位置设置正确
-            if (bookmark.position.preset === 'center') {
-                bookmark.position.x = 0;
-                bookmark.position.y = 0;
-            }
+            // 书签位置已在布局中设置
 
             // 更新背景设置UI
             this.updateBackgroundSettingsUI(bookmark);
@@ -1289,7 +1223,7 @@ class BookmarkManager {
                 this.canvasManager.updateBookmarkUI(bookmark);
             }
 
-            console.log(`已选择书签 ${index + 1}，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
+            console.log(`已选择书签 ${index + 1}，位置: (${bookmark.position.x}, ${bookmark.position.y})`);
         }
     }
 
@@ -1380,15 +1314,8 @@ class BookmarkManager {
 
     // 更新所有书签的布局
     updateLayout() {
-        if (this.layoutType === 'auto') {
-            this.applyAutoLayout();
-        } else if (this.layoutType === 'grid') {
-            this.applyGridLayout();
-        } else if (this.layoutType === 'horizontal') {
-            this.applyHorizontalLayout();
-        } else if (this.layoutType === 'vertical') {
-            this.applyVerticalLayout();
-        }
+        // 应用自动布局
+        this.applyAutoLayout();
 
         // 获取背景板尺寸
         let boardWidth = 400;
@@ -1411,277 +1338,23 @@ class BookmarkManager {
         }
     }
 
-    // 根据书签数量自动选择布局
+    // 根据书签数量自动布局
     applyAutoLayout() {
         const count = this.bookmarks.length;
 
-        switch(count) {
-            case 1: this.applySingleLayout(); break;
-            case 2: this.applyDoubleLayout(); break;
-            case 3: this.applyTripleLayout(); break;
-            case 4: this.applyQuadLayout(); break;
-            case 5: this.applyPentaLayout(); break;
-            case 6: this.applyHexaLayout(); break;
-            case 7: this.applyHeptaLayout(); break;
-            case 8: this.applyOctaLayout(); break;
+        if (count === 0) {
+            return;
+        } else if (count === 1) {
+            // 单个书签居中
+            this.applySingleLayout();
+        } else {
+            // 多个书签自动布局
+            this.applyMultiBookmarkLayout(count);
         }
     }
 
-    // 单个书签布局
-    applySingleLayout() {
-        if (this.bookmarks.length === 0) return;
-
-        // 单个书签居中
-        const bookmark = this.bookmarks[0];
-        bookmark.position.x = 0;
-        bookmark.position.y = 0;
-        bookmark.position.xUnit = 'percent';
-        bookmark.position.yUnit = 'percent';
-        bookmark.position.preset = 'center';
-    }
-
-    // 两个书签布局
-    applyDoubleLayout() {
-        if (this.bookmarks.length < 2) return;
-
-        // 两个书签水平排列
-        this.bookmarks[0].position.x = -25;
-        this.bookmarks[0].position.y = 0;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = 25;
-        this.bookmarks[1].position.y = 0;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-    }
-
-    // 三个书签布局
-    applyTripleLayout() {
-        if (this.bookmarks.length < 3) return;
-
-        // 三角形布局：上方一个居中，下方两个左右对称
-        this.bookmarks[0].position.x = 0;
-        this.bookmarks[0].position.y = 10;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = -25;
-        this.bookmarks[1].position.y = 60;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = 25;
-        this.bookmarks[2].position.y = 60;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-    }
-
-    // 四个书签布局
-    applyQuadLayout() {
-        if (this.bookmarks.length < 4) return;
-
-        // 2×2网格布局
-        this.bookmarks[0].position.x = -25;
-        this.bookmarks[0].position.y = 20;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = 25;
-        this.bookmarks[1].position.y = 20;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = -25;
-        this.bookmarks[2].position.y = 60;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-
-        this.bookmarks[3].position.x = 25;
-        this.bookmarks[3].position.y = 60;
-        this.bookmarks[3].position.xUnit = 'percent';
-        this.bookmarks[3].position.yUnit = 'percent';
-    }
-
-    // 五个书签布局
-    applyPentaLayout() {
-        if (this.bookmarks.length < 5) return;
-
-        // 十字布局：中央一个，上下左右各一个
-        this.bookmarks[0].position.x = 0;
-        this.bookmarks[0].position.y = 40;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = 0;
-        this.bookmarks[1].position.y = 10;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = 25;
-        this.bookmarks[2].position.y = 40;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-
-        this.bookmarks[3].position.x = 0;
-        this.bookmarks[3].position.y = 70;
-        this.bookmarks[3].position.xUnit = 'percent';
-        this.bookmarks[3].position.yUnit = 'percent';
-
-        this.bookmarks[4].position.x = -25;
-        this.bookmarks[4].position.y = 40;
-        this.bookmarks[4].position.xUnit = 'percent';
-        this.bookmarks[4].position.yUnit = 'percent';
-    }
-
-    // 六个书签布局
-    applyHexaLayout() {
-        if (this.bookmarks.length < 6) return;
-
-        // 2×3网格布局
-        this.bookmarks[0].position.x = -25;
-        this.bookmarks[0].position.y = 15;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = 0;
-        this.bookmarks[1].position.y = 15;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = 25;
-        this.bookmarks[2].position.y = 15;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-
-        this.bookmarks[3].position.x = -25;
-        this.bookmarks[3].position.y = 60;
-        this.bookmarks[3].position.xUnit = 'percent';
-        this.bookmarks[3].position.yUnit = 'percent';
-
-        this.bookmarks[4].position.x = 0;
-        this.bookmarks[4].position.y = 60;
-        this.bookmarks[4].position.xUnit = 'percent';
-        this.bookmarks[4].position.yUnit = 'percent';
-
-        this.bookmarks[5].position.x = 25;
-        this.bookmarks[5].position.y = 60;
-        this.bookmarks[5].position.xUnit = 'percent';
-        this.bookmarks[5].position.yUnit = 'percent';
-    }
-
-    // 七个书签布局
-    applyHeptaLayout() {
-        if (this.bookmarks.length < 7) return;
-
-        // 六边形+中心布局
-        this.bookmarks[0].position.x = 0;
-        this.bookmarks[0].position.y = 40;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = 0;
-        this.bookmarks[1].position.y = 10;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = 20;
-        this.bookmarks[2].position.y = 20;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-
-        this.bookmarks[3].position.x = 20;
-        this.bookmarks[3].position.y = 60;
-        this.bookmarks[3].position.xUnit = 'percent';
-        this.bookmarks[3].position.yUnit = 'percent';
-
-        this.bookmarks[4].position.x = 0;
-        this.bookmarks[4].position.y = 70;
-        this.bookmarks[4].position.xUnit = 'percent';
-        this.bookmarks[4].position.yUnit = 'percent';
-
-        this.bookmarks[5].position.x = -20;
-        this.bookmarks[5].position.y = 60;
-        this.bookmarks[5].position.xUnit = 'percent';
-        this.bookmarks[5].position.yUnit = 'percent';
-
-        this.bookmarks[6].position.x = -20;
-        this.bookmarks[6].position.y = 20;
-        this.bookmarks[6].position.xUnit = 'percent';
-        this.bookmarks[6].position.yUnit = 'percent';
-    }
-
-    // 八个书签布局
-    applyOctaLayout() {
-        if (this.bookmarks.length < 8) return;
-
-        // 2×4网格布局
-        this.bookmarks[0].position.x = -30;
-        this.bookmarks[0].position.y = 20;
-        this.bookmarks[0].position.xUnit = 'percent';
-        this.bookmarks[0].position.yUnit = 'percent';
-
-        this.bookmarks[1].position.x = -10;
-        this.bookmarks[1].position.y = 20;
-        this.bookmarks[1].position.xUnit = 'percent';
-        this.bookmarks[1].position.yUnit = 'percent';
-
-        this.bookmarks[2].position.x = 10;
-        this.bookmarks[2].position.y = 20;
-        this.bookmarks[2].position.xUnit = 'percent';
-        this.bookmarks[2].position.yUnit = 'percent';
-
-        this.bookmarks[3].position.x = 30;
-        this.bookmarks[3].position.y = 20;
-        this.bookmarks[3].position.xUnit = 'percent';
-        this.bookmarks[3].position.yUnit = 'percent';
-
-        this.bookmarks[4].position.x = -30;
-        this.bookmarks[4].position.y = 60;
-        this.bookmarks[4].position.xUnit = 'percent';
-        this.bookmarks[4].position.yUnit = 'percent';
-
-        this.bookmarks[5].position.x = -10;
-        this.bookmarks[5].position.y = 60;
-        this.bookmarks[5].position.xUnit = 'percent';
-        this.bookmarks[5].position.yUnit = 'percent';
-
-        this.bookmarks[6].position.x = 10;
-        this.bookmarks[6].position.y = 60;
-        this.bookmarks[6].position.xUnit = 'percent';
-        this.bookmarks[6].position.yUnit = 'percent';
-
-        this.bookmarks[7].position.x = 30;
-        this.bookmarks[7].position.y = 60;
-        this.bookmarks[7].position.xUnit = 'percent';
-        this.bookmarks[7].position.yUnit = 'percent';
-    }
-
-    // 渲染所有书签到导出Canvas
-    renderToExportCanvas(ctx, boardWidth, boardHeight) {
-        console.log(`开始导出书签，背景板尺寸: ${boardWidth}x${boardHeight}`);
-
-        // 遍历所有书签
-        for (const bookmark of this.bookmarks) {
-            // 计算书签在背景板中的位置
-            const { x, y } = bookmark.calculatePosition(boardWidth, boardHeight);
-
-            // 获取缩放后的尺寸
-            const { width, height } = bookmark.getScaledDimensions();
-
-            // 绘制书签内容到导出Canvas
-            // 这里会调用 bookmark.render 方法，该方法会创建临时Canvas并绘制
-            bookmark.render(ctx, x, y, width, height);
-
-            console.log(`导出书签 ${bookmark.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
-        }
-    }
-
-    // 应用网格布局
-    applyGridLayout() {
-        const count = this.bookmarks.length;
-        if (count === 0) return;
-
+    // 多个书签的自动布局
+    applyMultiBookmarkLayout(count) {
         // 根据书签数量确定行列数
         let rows, cols;
         if (count <= 3) {
@@ -1711,42 +1384,22 @@ class BookmarkManager {
         }
     }
 
-    // 应用水平布局
-    applyHorizontalLayout() {
-        const count = this.bookmarks.length;
-        if (count === 0) return;
+    // 单个书签布局
+    applySingleLayout() {
+        if (this.bookmarks.length === 0) return;
 
-        // 水平排列所有书签
-        for (let i = 0; i < count; i++) {
-            // 计算水平位置，均匀分布
-            const xPercent = (i / (count - 1 || 1) - 0.5) * 80; // -40% 到 40%
-
-            this.bookmarks[i].position.x = xPercent;
-            this.bookmarks[i].position.y = 40; // 垂直居中偏下
-            this.bookmarks[i].position.xUnit = 'percent';
-            this.bookmarks[i].position.yUnit = 'percent';
-        }
-    }
-
-    // 应用垂直布局
-    applyVerticalLayout() {
-        const count = this.bookmarks.length;
-        if (count === 0) return;
-
-        // 垂直排列所有书签
-        for (let i = 0; i < count; i++) {
-            // 计算垂直位置，均匀分布
-            const yPercent = (i / (count - 1 || 1)) * 70 + 15; // 15% 到 85%
-
-            this.bookmarks[i].position.x = 0; // 水平居中
-            this.bookmarks[i].position.y = yPercent;
-            this.bookmarks[i].position.xUnit = 'percent';
-            this.bookmarks[i].position.yUnit = 'percent';
-        }
+        // 单个书签居中
+        const bookmark = this.bookmarks[0];
+        bookmark.position.x = 0;
+        bookmark.position.y = 0;
+        bookmark.position.xUnit = 'percent';
+        bookmark.position.yUnit = 'percent';
     }
 
     // 渲染所有书签到导出Canvas
     renderToExportCanvas(ctx, boardWidth, boardHeight) {
+        console.log(`开始导出书签，背景板尺寸: ${boardWidth}x${boardHeight}`);
+
         // 渲染每个书签
         for (const bookmark of this.bookmarks) {
             // 获取书签在背景板中的位置
@@ -1769,7 +1422,10 @@ class BookmarkManager {
                     // 在阴影Canvas上绘制实际的书签内容
                     const shadowCtx = shadowCanvas.getContext('2d');
                     shadowCtx.save();
-                    shadowCtx.drawImage(bookmark.canvas, shadowOffsetX, shadowOffsetY, width, height);
+
+                    // 创建临时Canvas并绘制书签内容
+                    const tempCanvas = bookmark.createExportCanvas();
+                    shadowCtx.drawImage(tempCanvas, shadowOffsetX, shadowOffsetY, width, height);
                     shadowCtx.restore();
 
                     // 将带阴影的书签绘制到导出Canvas上
@@ -1786,6 +1442,8 @@ class BookmarkManager {
                 // 直接渲染书签
                 bookmark.render(ctx, x, y, width, height);
             }
+
+            console.log(`导出书签 ${bookmark.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
         }
     }
 }

@@ -55,7 +55,6 @@ class BookmarkCanvas {
         this.gradientPositions = [0, 50, 100];
 
         // 书签位置控制
-        this.bookmarkPosition = document.getElementById('bookmarkPosition');
         this.bookmarkX = document.getElementById('bookmarkX');
         this.bookmarkY = document.getElementById('bookmarkY');
         this.bookmarkXUnit = document.getElementById('bookmarkXUnit');
@@ -232,53 +231,43 @@ class BookmarkCanvas {
             }
         });
 
-        // 书签位置预设选择事件
-        this.bookmarkPosition.addEventListener('change', (e) => {
-            this.bookmarkPositionData.preset = e.target.value;
-
-            // 根据预设更新位置
-            if (e.target.value !== 'custom') {
-                this.applyPresetPosition(e.target.value);
-            }
-
-            // 更新UI
-            this.updateBookmarkPositionUI();
-
-            // 更新书签位置
-            this.updateBookmarkPosition();
-        });
+        // 书签位置预设选择事件 - 已移除，使用自动布局
 
         // X位置输入事件
-        this.bookmarkX.addEventListener('input', (e) => {
-            this.bookmarkPositionData.x = parseFloat(e.target.value);
-            this.bookmarkPositionData.preset = 'custom';
-            this.bookmarkPosition.value = 'custom';
-            this.updateBookmarkPosition();
-        });
+        if (this.bookmarkX) {
+            this.bookmarkX.addEventListener('input', (e) => {
+                this.bookmarkPositionData.x = parseFloat(e.target.value);
+                this.bookmarkPositionData.preset = 'custom';
+                this.updateBookmarkPosition();
+            });
+        }
 
         // Y位置输入事件
-        this.bookmarkY.addEventListener('input', (e) => {
-            this.bookmarkPositionData.y = parseFloat(e.target.value);
-            this.bookmarkPositionData.preset = 'custom';
-            this.bookmarkPosition.value = 'custom';
-            this.updateBookmarkPosition();
-        });
+        if (this.bookmarkY) {
+            this.bookmarkY.addEventListener('input', (e) => {
+                this.bookmarkPositionData.y = parseFloat(e.target.value);
+                this.bookmarkPositionData.preset = 'custom';
+                this.updateBookmarkPosition();
+            });
+        }
 
         // X单位选择事件
-        this.bookmarkXUnit.addEventListener('change', (e) => {
-            this.bookmarkPositionData.xUnit = e.target.value;
-            this.bookmarkPositionData.preset = 'custom';
-            this.bookmarkPosition.value = 'custom';
-            this.updateBookmarkPosition();
-        });
+        if (this.bookmarkXUnit) {
+            this.bookmarkXUnit.addEventListener('change', (e) => {
+                this.bookmarkPositionData.xUnit = e.target.value;
+                this.bookmarkPositionData.preset = 'custom';
+                this.updateBookmarkPosition();
+            });
+        }
 
         // Y单位选择事件
-        this.bookmarkYUnit.addEventListener('change', (e) => {
-            this.bookmarkPositionData.yUnit = e.target.value;
-            this.bookmarkPositionData.preset = 'custom';
-            this.bookmarkPosition.value = 'custom';
-            this.updateBookmarkPosition();
-        });
+        if (this.bookmarkYUnit) {
+            this.bookmarkYUnit.addEventListener('change', (e) => {
+                this.bookmarkPositionData.yUnit = e.target.value;
+                this.bookmarkPositionData.preset = 'custom';
+                this.updateBookmarkPosition();
+            });
+        }
 
         // 书签拖动事件
         this.canvas.addEventListener('mousedown', (e) => {
@@ -298,7 +287,6 @@ class BookmarkCanvas {
 
             // 切换到自定义位置
             this.bookmarkPositionData.preset = 'custom';
-            this.bookmarkPosition.value = 'custom';
 
             // 阻止默认事件和冒泡
             e.preventDefault();
@@ -692,11 +680,7 @@ class BookmarkCanvas {
         // 更新缩放UI
         this.currentScale = bookmark.scale;
 
-        // 确保书签位置正确
-        if (bookmark.position.preset === 'center') {
-            bookmark.position.x = 0;
-            bookmark.position.y = 0;
-        }
+        // 位置已在布局中设置
 
         // 通知书签管理器更新布局
         if (this.bookmarkManager) {
@@ -706,7 +690,7 @@ class BookmarkCanvas {
         // 重新渲染Canvas
         this.render();
 
-        console.log(`Canvas: 更新书签UI，位置: (${bookmark.position.x}, ${bookmark.position.y}), 预设: ${bookmark.position.preset}`);
+        console.log(`Canvas: 更新书签UI，位置: (${bookmark.position.x}, ${bookmark.position.y})`);
     }
 
     // 更新书签位置
