@@ -238,17 +238,27 @@ class Bookmark {
         // 计算位置（不考虑缩放）
         const { x, y } = this.calculatePosition(boardWidth, boardHeight);
 
+        // 确保缩放比例有效
+        const scaleRatio = Math.max(0.1, this.scale / 100);
+
+        // 计算缩放后的尺寸
+        const scaledWidth = originalWidth * scaleRatio;
+        const scaledHeight = originalHeight * scaleRatio;
+
+        // 计算缩放后的位置（保持中心点不变）
+        const scaledX = x - (originalWidth - scaledWidth) / 2;
+        const scaledY = y - (originalHeight - scaledHeight) / 2;
+
         // 更新DOM元素样式
-        this.element.style.left = `${x}px`;
-        this.element.style.top = `${y}px`;
-        this.element.style.width = `${originalWidth}px`;
-        this.element.style.height = `${originalHeight}px`;
+        this.element.style.left = `${scaledX}px`;
+        this.element.style.top = `${scaledY}px`;
+        this.element.style.width = `${scaledWidth}px`;
+        this.element.style.height = `${scaledHeight}px`;
 
-        // 设置缩放，使用transform-origin: center center确保从中心缩放
-        this.element.style.transform = `scale(${this.scale / 100})`;
-        this.element.style.transformOrigin = 'center center';
+        // 不再使用transform缩放，而是直接设置元素尺寸
+        this.element.style.transform = 'none';
 
-        console.log(`设置书签 ${this.id} 位置: (${x}, ${y}), 原始尺寸: ${originalWidth}x${originalHeight}, 缩放: ${this.scale}%`);
+        console.log(`设置书签 ${this.id} 位置: (${scaledX}, ${scaledY}), 缩放后尺寸: ${scaledWidth}x${scaledHeight}, 缩放: ${this.scale}%`);
     }
 
     // 设置选中状态
@@ -262,7 +272,8 @@ class Bookmark {
 
     // 获取缩放后的尺寸
     getScaledDimensions() {
-        const scaleRatio = this.scale / 100;
+        // 确保缩放比例有效
+        const scaleRatio = Math.max(0.1, this.scale / 100);
         return {
             width: this.width * scaleRatio,
             height: this.height * scaleRatio
@@ -1223,7 +1234,7 @@ class BookmarkManager {
                 this.canvasManager.updateBookmarkUI(bookmark);
             }
 
-            console.log(`已选择书签 ${index + 1}，位置: (${bookmark.position.x}, ${bookmark.position.y})`);
+            console.log(`已选择书签 ${index + 1}，位置: (${bookmark.position.x}, ${bookmark.position.y}), 缩放: ${bookmark.scale}%`);
         }
     }
 
@@ -1328,6 +1339,35 @@ class BookmarkManager {
             console.log(`背景板尺寸: ${boardWidth}x${boardHeight}`);
         }
 
+        // 计算所有书签的最大尺寸（考虑缩放）
+        let maxWidth = 0;
+        let maxHeight = 0;
+
+        for (const bookmark of this.bookmarks) {
+            const scaleRatio = bookmark.scale / 100;
+            const scaledWidth = bookmark.width * scaleRatio;
+            const scaledHeight = bookmark.height * scaleRatio;
+
+            maxWidth = Math.max(maxWidth, scaledWidth);
+            maxHeight = Math.max(maxHeight, scaledHeight);
+        }
+
+        // 确保背景板足够大以容纳所有书签
+        const minBoardWidth = maxWidth * 1.2; // 添加20%的边距
+        const minBoardHeight = maxHeight * 1.2; // 添加20%的边距
+
+        // 如果背景板太小，调整其大小
+        if (boardWidth < minBoardWidth || boardHeight < minBoardHeight) {
+            boardWidth = Math.max(boardWidth, minBoardWidth);
+            boardHeight = Math.max(boardHeight, minBoardHeight);
+
+            if (this.boardContainer) {
+                this.boardContainer.style.width = `${boardWidth}px`;
+                this.boardContainer.style.height = `${boardHeight}px`;
+                console.log(`调整背景板尺寸为: ${boardWidth}x${boardHeight}`);
+            }
+        }
+
         // 更新每个书签的预览和位置
         for (const bookmark of this.bookmarks) {
             // 更新预览内容
@@ -1395,6 +1435,8 @@ class BookmarkManager {
         bookmark.position.xUnit = 'percent';
         bookmark.position.yUnit = 'percent';
     }
+
+
 
     // 渲染所有书签到导出Canvas
     renderToExportCanvas(ctx, boardWidth, boardHeight) {

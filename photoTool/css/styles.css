@@ -60,16 +60,17 @@ body {
 
 .background-board {
     width: 600px;
-    height: 800px; /* 保持3:4比例 */
+    height: 800px; /* 初始尺寸，保持3:4比例 */
     background-color: #f5f5f5;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     position: relative;
-    overflow: hidden; /* 改为hidden，防止滚动条 */
+    overflow: hidden; /* 防止滚动条 */
     margin: 0 auto; /* 居中显示 */
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: width 0.3s, height 0.3s; /* 添加平滑过渡效果 */
 }
 
 .canvas-container {
@@ -334,9 +335,9 @@ canvas {
 .background-board {
     resize: both;
     overflow: auto;
-    min-width: 200px;
-    min-height: 200px;
-    max-width: 800px;
+    min-width: 250px; /* 确保最小宽度能容纳小书签 */
+    min-height: 650px; /* 确保最小高度能容纳小书签 */
+    max-width: 1200px; /* 增加最大宽度 */
     max-height: 2000px;
 }
 

@@ -403,16 +403,31 @@ class BookmarkCanvas {
         });
 
         // 书签缩放事件
-        this.bookmarkScale.addEventListener('input', (e) => {
-            this.currentScale = parseInt(e.target.value);
-            this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+        if (this.bookmarkScale) {
+            this.bookmarkScale.addEventListener('input', (e) => {
+                this.currentScale = parseInt(e.target.value);
+                if (this.bookmarkScaleValue) {
+                    this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+                }
 
-            // 应用缩放
-            this.applyBookmarkScale();
+                // 获取当前选中的书签
+                if (bookmarkManager) {
+                    const selectedBookmark = bookmarkManager.getSelectedBookmark();
+                    if (selectedBookmark) {
+                        // 更新选中书签的缩放比例
+                        selectedBookmark.scale = this.currentScale;
 
-            // 更新书签位置
-            this.updateBookmarkPosition();
-        });
+                        // 更新书签位置和尺寸
+                        bookmarkManager.updateLayout();
+                    }
+                }
+
+                // 更新单个书签显示
+                this.updateSingleBookmarkDisplay();
+
+                console.log(`应用书签缩放: ${this.currentScale}%`);
+            });
+        }
 
         // 监听背景板大小变化（拖拽调整大小）
         const resizeObserver = new ResizeObserver(entries => {
@@ -560,8 +575,30 @@ class BookmarkCanvas {
 
     // 应用书签缩放
     applyBookmarkScale() {
-        // 更新书签位置，考虑缩放因素
-        this.updateBookmarkPosition();
+        // 更新缩放UI
+        if (this.bookmarkScale) {
+            this.bookmarkScale.value = this.currentScale;
+        }
+        if (this.bookmarkScaleValue) {
+            this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+        }
+
+        // 获取当前选中的书签
+        if (bookmarkManager) {
+            const selectedBookmark = bookmarkManager.getSelectedBookmark();
+            if (selectedBookmark) {
+                // 更新选中书签的缩放比例
+                selectedBookmark.scale = this.currentScale;
+
+                // 更新书签位置和尺寸
+                bookmarkManager.updateLayout();
+            }
+        }
+
+        // 更新单个书签显示
+        this.updateSingleBookmarkDisplay();
+
+        console.log(`应用书签缩放: ${this.currentScale}%`);
     }
 
     // 更新书签位置
@@ -572,13 +609,15 @@ class BookmarkCanvas {
             const selectedBookmark = bookmarkManager.getSelectedBookmark();
             if (selectedBookmark) {
                 // 更新选中书签的位置数据
-                selectedBookmark.position = this.bookmarkPositionData;
+                selectedBookmark.position = { ...this.bookmarkPositionData };
 
-                // 更新选中书签的缩放比例
-                selectedBookmark.scale = this.currentScale;
+                // 确保缩放比例有效
+                selectedBookmark.scale = Math.max(10, this.currentScale);
 
                 // 重新渲染所有书签
                 bookmarkManager.updateLayout();
+
+                console.log(`更新书签位置: (${selectedBookmark.position.x}, ${selectedBookmark.position.y}), 缩放: ${selectedBookmark.scale}%`);
             }
 
             // 更新单个书签的显示（用于编辑预览）
@@ -594,25 +633,26 @@ class BookmarkCanvas {
         const canvasContainer = document.querySelector('.canvas-container');
         const boardElement = document.querySelector('.background-board');
 
-        // 获取当前缩放比例
-        const scaleRatio = this.currentScale / 100;
+        if (!canvasContainer || !boardElement) return;
 
-        // 重要：设置transform-origin为左上角，这样缩放不会影响位置计算
-        canvasContainer.style.transformOrigin = 'top left';
+        // 获取当前缩放比例，确保有效
+        const scaleRatio = Math.max(0.1, this.currentScale / 100);
 
-        // 应用缩放
-        canvasContainer.style.transform = `scale(${scaleRatio})`;
+        // 获取原始书签尺寸
+        const originalWidth = this.canvas.width / this.dpr;
+        const originalHeight = this.canvas.height / this.dpr;
+
+        // 计算缩放后的尺寸
+        const scaledWidth = originalWidth * scaleRatio;
+        const scaledHeight = originalHeight * scaleRatio;
+
+        // 直接设置容器尺寸，不再使用transform缩放
+        canvasContainer.style.width = `${scaledWidth}px`;
+        canvasContainer.style.height = `${scaledHeight}px`;
+        canvasContainer.style.transform = 'none';
 
         // 计算位置
         let x, y;
-
-        // 获取原始书签尺寸（未缩放）
-        const originalWidth = this.canvas.width;
-        const originalHeight = this.canvas.height;
-
-        // 获取缩放后的书签尺寸
-        const scaledWidth = originalWidth * scaleRatio;
-        const scaledHeight = originalHeight * scaleRatio;
 
         // X位置计算
         if (this.bookmarkPositionData.xUnit === 'px') {
@@ -653,6 +693,8 @@ class BookmarkCanvas {
         // 应用位置 - 使用绝对定位
         canvasContainer.style.left = `${x}px`;
         canvasContainer.style.top = `${y}px`;
+
+        console.log(`更新单个书签显示，位置: (${x}, ${y}), 缩放后尺寸: ${scaledWidth}x${scaledHeight}, 缩放: ${this.currentScale}%`);
     }
 
     // 渲染Canvas
@@ -680,6 +722,14 @@ class BookmarkCanvas {
         // 更新缩放UI
         this.currentScale = bookmark.scale;
 
+        // 更新缩放控件
+        if (this.bookmarkScale) {
+            this.bookmarkScale.value = this.currentScale;
+        }
+        if (this.bookmarkScaleValue) {
+            this.bookmarkScaleValue.textContent = `${this.currentScale}%`;
+        }
+
         // 位置已在布局中设置
 
         // 通知书签管理器更新布局
@@ -690,7 +740,7 @@ class BookmarkCanvas {
         // 重新渲染Canvas
         this.render();
 
-        console.log(`Canvas: 更新书签UI，位置: (${bookmark.position.x}, ${bookmark.position.y})`);
+        console.log(`Canvas: 更新书签UI，位置: (${bookmark.position.x}, ${bookmark.position.y}), 缩放: ${this.currentScale}%`);
     }
 
     // 更新书签位置
@@ -823,8 +873,8 @@ class BookmarkCanvas {
         // 计算书签在背景板中的位置（使用用户设置的位置）
         let bookmarkX, bookmarkY;
 
-        // 获取当前缩放比例
-        const scaleRatio = this.currentScale / 100;
+        // 获取当前缩放比例，确保有效
+        const scaleRatio = Math.max(0.1, this.currentScale / 100);
 
         // 获取原始书签尺寸（未缩放）
         const originalWidth = this.canvas.width;
