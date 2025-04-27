@@ -240,7 +240,7 @@ canvas {
     pointer-events: none; /* 允许点击穿透到背景 */
 }
 
-.bookmark-item-canvas {
+.bookmark-item-preview {
     position: absolute;
     border: 2px solid transparent;
     box-sizing: border-box;
@@ -250,15 +250,18 @@ canvas {
     cursor: pointer;
 }
 
-.bookmark-item-canvas.selected {
+.bookmark-item-preview.selected {
     border-color: #4a90e2;
     z-index: 20; /* 确保选中的书签在最上层 */
 }
 
-.bookmark-item-canvas canvas {
+.bookmark-preview-content {
     width: 100%;
     height: 100%;
     display: block; /* 防止底部间隙 */
+    background-color: #FFFFFF;
+    background-position: center center;
+    background-repeat: no-repeat;
 }
 
 /* 图片裁剪区域样式 */

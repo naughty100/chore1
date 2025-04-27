@@ -886,100 +886,134 @@ class BackgroundManager {
     // 绑定事件
     bindEvents() {
         // 背景类型切换
-        this.bgTypeRadios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    this.setBackgroundType(e.target.value);
+        if (this.bgTypeRadios) {
+            this.bgTypeRadios.forEach(radio => {
+                if (radio) {
+                    radio.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            this.setBackgroundType(e.target.value);
+                        }
+                    });
                 }
             });
-        });
+        }
 
         // 纯色背景设置
-        this.bgColorInput.addEventListener('input', () => {
-            if (this.backgroundLayer) {
-                const data = this.backgroundLayer.getData();
-                data.color = this.bgColorInput.value;
-                this.backgroundLayer.setData(data);
-                this.render();
-            }
-        });
+        if (this.bgColorInput) {
+            this.bgColorInput.addEventListener('input', () => {
+                if (this.backgroundLayer) {
+                    const data = this.backgroundLayer.getData();
+                    data.color = this.bgColorInput.value;
+                    this.backgroundLayer.setData(data);
+                    this.render();
+                }
+            });
+        }
 
         // 渐变背景设置
-        this.gradientTypeSelect.addEventListener('change', () => {
-            if (this.backgroundLayer) {
-                const data = this.backgroundLayer.getData();
-                data.gradient.type = this.gradientTypeSelect.value;
-                this.backgroundLayer.setData(data);
-                this.render();
-            }
-        });
+        if (this.gradientTypeSelect) {
+            this.gradientTypeSelect.addEventListener('change', () => {
+                if (this.backgroundLayer) {
+                    const data = this.backgroundLayer.getData();
+                    data.gradient.type = this.gradientTypeSelect.value;
+                    this.backgroundLayer.setData(data);
+                    this.render();
+                }
+            });
+        }
 
-        this.gradientAngleInput.addEventListener('input', () => {
-            if (this.backgroundLayer) {
-                const angle = parseInt(this.gradientAngleInput.value);
-                this.gradientAngleValue.textContent = `${angle}°`;
-                console.log(`设置渐变角度: ${angle}°`); // 添加日志
-                const data = this.backgroundLayer.getData();
-                data.gradient.angle = angle;
-                this.backgroundLayer.setData(data);
+        if (this.gradientAngleInput && this.gradientAngleValue) {
+            this.gradientAngleInput.addEventListener('input', () => {
+                if (this.backgroundLayer) {
+                    const angle = parseInt(this.gradientAngleInput.value);
+                    this.gradientAngleValue.textContent = `${angle}°`;
+                    console.log(`设置渐变角度: ${angle}°`); // 添加日志
+                    const data = this.backgroundLayer.getData();
+                    data.gradient.angle = angle;
+                    this.backgroundLayer.setData(data);
 
-                this.render();
-            }
-        });
+                    this.render();
+                }
+            });
+        }
 
-        this.addColorStopBtn.addEventListener('click', () => {
-            this.addGradientStop();
-        });
+        if (this.addColorStopBtn) {
+            this.addColorStopBtn.addEventListener('click', () => {
+                this.addGradientStop();
+            });
+        }
 
         // 图片背景设置
-        this.bgImageInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                this.loadBackgroundImage(e.target.files[0]);
-            }
-        });
+        if (this.bgImageInput) {
+            this.bgImageInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.loadBackgroundImage(e.target.files[0]);
+                }
+            });
+        }
 
-        this.imageRepeatSelect.addEventListener('change', () => {
-            this.updateImageSettings();
-        });
+        if (this.imageRepeatSelect) {
+            this.imageRepeatSelect.addEventListener('change', () => {
+                this.updateImageSettings();
+            });
+        }
 
-        this.imageFitSelect.addEventListener('change', () => {
-            this.updateImageSettings();
-        });
+        if (this.imageFitSelect) {
+            this.imageFitSelect.addEventListener('change', () => {
+                this.updateImageSettings();
+            });
+        }
 
-        this.imageOpacityInput.addEventListener('input', () => {
-            this.updateImageSettings();
-        });
+        if (this.imageOpacityInput) {
+            this.imageOpacityInput.addEventListener('input', () => {
+                this.updateImageSettings();
+            });
+        }
 
         // 重新裁剪按钮
-        this.reopenCropBtn.addEventListener('click', () => {
-            this.reopenCrop();
-        });
+        if (this.reopenCropBtn) {
+            this.reopenCropBtn.addEventListener('click', () => {
+                this.reopenCrop();
+            });
+        }
 
         // 提取颜色按钮
-        this.extractColorsBtn.addEventListener('click', () => {
-            this.extractColorsFromImage();
-        });
+        if (this.extractColorsBtn) {
+            this.extractColorsBtn.addEventListener('click', () => {
+                this.extractColorsFromImage();
+            });
+        }
 
         // 几何图案设置
-        this.patternTypeSelect.addEventListener('change', () => {
-            this.updatePatternSettings();
-        });
+        if (this.patternTypeSelect) {
+            this.patternTypeSelect.addEventListener('change', () => {
+                this.updatePatternSettings();
+            });
+        }
 
-        this.patternColor1Input.addEventListener('input', () => {
-            this.updatePatternSettings();
-        });
+        if (this.patternColor1Input) {
+            this.patternColor1Input.addEventListener('input', () => {
+                this.updatePatternSettings();
+            });
+        }
 
-        this.patternColor2Input.addEventListener('input', () => {
-            this.updatePatternSettings();
-        });
+        if (this.patternColor2Input) {
+            this.patternColor2Input.addEventListener('input', () => {
+                this.updatePatternSettings();
+            });
+        }
 
-        this.patternSizeInput.addEventListener('input', () => {
-            this.updatePatternSettings();
-        });
+        if (this.patternSizeInput) {
+            this.patternSizeInput.addEventListener('input', () => {
+                this.updatePatternSettings();
+            });
+        }
 
-        this.patternAngleInput.addEventListener('input', () => {
-            this.updatePatternSettings();
-        });
+        if (this.patternAngleInput) {
+            this.patternAngleInput.addEventListener('input', () => {
+                this.updatePatternSettings();
+            });
+        }
     }
 }
 

@@ -30,17 +30,22 @@ class Bookmark {
 
         // 创建DOM元素
         this.element = document.createElement('div');
-        this.element.className = 'bookmark-item-canvas';
-        this.element.id = `bookmark-canvas-${id}`;
+        this.element.className = 'bookmark-item-preview';
+        this.element.id = `bookmark-preview-${id}`;
 
-        // 创建Canvas元素（用于渲染书签内容）
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.ctx = this.canvas.getContext('2d');
+        // 创建预览图片元素
+        this.previewElement = document.createElement('div');
+        this.previewElement.className = 'bookmark-preview-content';
+        this.previewElement.style.width = '100%';
+        this.previewElement.style.height = '100%';
+        this.previewElement.style.backgroundColor = '#FFFFFF';
 
-        // 将Canvas添加到DOM元素中
-        this.element.appendChild(this.canvas);
+        // 将预览元素添加到DOM元素中
+        this.element.appendChild(this.previewElement);
+
+        // Canvas只在导出时创建
+        this.canvas = null;
+        this.ctx = null;
 
         // 设置DOM元素的初始样式
         this.element.style.position = 'absolute';
@@ -52,8 +57,8 @@ class Bookmark {
         this.position.x = 0;
         this.position.y = 0;
 
-        // 初始化Canvas（创建空白书签）
-        this.initCanvas();
+        // 初始化预览元素
+        this.updatePreview();
 
         // 添加点击事件，用于选择书签
         this.element.addEventListener('click', () => {
@@ -63,38 +68,94 @@ class Bookmark {
         });
     }
 
-    // 初始化Canvas（创建空白书签）
-    initCanvas() {
-        // 确保Canvas尺寸正确
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+    // 更新预览元素
+    updatePreview() {
+        console.log(`更新书签 ${this.id} 的预览`);
 
-        // 清除Canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // 重置预览元素样式
+        this.previewElement.style.backgroundColor = '#FFFFFF';
+        this.previewElement.style.backgroundImage = 'none';
 
-        // 绘制空白背景
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        console.log(`初始化书签 ${this.id} 的Canvas，尺寸: ${this.canvas.width}x${this.canvas.height}`);
-
-        // 如果有背景图片，绘制背景图片
+        // 如果有背景图片，设置背景图片
         if (this.background.image) {
-            console.log(`书签 ${this.id} 有背景图片，准备绘制，图片尺寸: ${this.background.image.width}x${this.background.image.height}`);
-            this.drawBackgroundImage();
+            console.log(`书签 ${this.id} 有背景图片，准备设置，图片尺寸: ${this.background.image.width}x${this.background.image.height}`);
+            this.setBackgroundImage();
         } else {
             console.log(`书签 ${this.id} 没有背景图片`);
         }
     }
 
-    // 绘制背景图片
-    drawBackgroundImage() {
+    // 设置背景图片
+    setBackgroundImage() {
         if (!this.background.image) {
             console.log(`书签 ${this.id}: 没有背景图片`);
             return;
         }
 
-        console.log(`书签 ${this.id}: 绘制背景图片，尺寸: ${this.background.image.width}x${this.background.image.height}`);
+        console.log(`书签 ${this.id}: 设置背景图片，尺寸: ${this.background.image.width}x${this.background.image.height}`);
+
+        // 获取图片URL
+        const imgUrl = this.background.image.src;
+
+        // 设置不透明度
+        this.previewElement.style.opacity = this.background.imageOpacity / 100;
+
+        // 根据适应方式设置背景图片
+        if (this.background.imageRepeat === 'no-repeat') {
+            // 设置背景图片
+            this.previewElement.style.backgroundImage = `url(${imgUrl})`;
+            this.previewElement.style.backgroundRepeat = 'no-repeat';
+
+            // 根据适应方式设置背景尺寸和位置
+            if (this.background.imageFit === 'cover') {
+                this.previewElement.style.backgroundSize = 'cover';
+                this.previewElement.style.backgroundPosition = 'center center';
+                console.log(`书签 ${this.id}: 设置背景图片 (cover)`);
+            } else if (this.background.imageFit === 'contain') {
+                this.previewElement.style.backgroundSize = 'contain';
+                this.previewElement.style.backgroundPosition = 'center center';
+                console.log(`书签 ${this.id}: 设置背景图片 (contain)`);
+            } else {
+                // 居中显示（原始大小）
+                this.previewElement.style.backgroundSize = 'auto';
+                this.previewElement.style.backgroundPosition = 'center center';
+                console.log(`书签 ${this.id}: 设置背景图片 (center)`);
+            }
+        } else {
+            // 平铺
+            this.previewElement.style.backgroundImage = `url(${imgUrl})`;
+            this.previewElement.style.backgroundRepeat = this.background.imageRepeat;
+            this.previewElement.style.backgroundSize = 'auto';
+            console.log(`书签 ${this.id}: 设置背景图片 (${this.background.imageRepeat})`);
+        }
+    }
+
+    // 创建用于导出的Canvas
+    createExportCanvas() {
+        // 创建Canvas
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.ctx = this.canvas.getContext('2d');
+
+        // 清除Canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 绘制白色背景
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 如果有背景图片，绘制背景图片
+        if (this.background.image) {
+            this.drawBackgroundImageToCanvas();
+        }
+
+        return this.canvas;
+    }
+
+    // 绘制背景图片到Canvas（仅用于导出）
+    drawBackgroundImageToCanvas() {
+        if (!this.background.image || !this.ctx) return;
 
         // 保存当前状态
         this.ctx.save();
@@ -131,7 +192,6 @@ class Bookmark {
                 }
 
                 this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                console.log(`书签 ${this.id}: 绘制背景图片 (cover), 位置: (${drawX}, ${drawY}), 尺寸: ${drawWidth}x${drawHeight}`);
             } else if (this.background.imageFit === 'contain') {
                 // 包含（保持比例，可能留白）
                 const imgRatio = img.width / img.height;
@@ -154,20 +214,17 @@ class Bookmark {
                 }
 
                 this.ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                console.log(`书签 ${this.id}: 绘制背景图片 (contain), 位置: (${drawX}, ${drawY}), 尺寸: ${drawWidth}x${drawHeight}`);
             } else {
                 // 居中显示（原始大小）
                 const drawX = (canvasWidth - img.width) / 2;
                 const drawY = (canvasHeight - img.height) / 2;
                 this.ctx.drawImage(img, drawX, drawY);
-                console.log(`书签 ${this.id}: 绘制背景图片 (center), 位置: (${drawX}, ${drawY}), 尺寸: ${img.width}x${img.height}`);
             }
         } else {
             // 创建图案
             const pattern = this.ctx.createPattern(img, this.background.imageRepeat);
             this.ctx.fillStyle = pattern;
             this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-            console.log(`书签 ${this.id}: 绘制背景图片 (pattern), 平铺方式: ${this.background.imageRepeat}`);
         }
 
         // 恢复状态
@@ -306,9 +363,13 @@ class Bookmark {
         }
     }
 
-    // 渲染书签到指定的上下文
+    // 渲染书签到指定的上下文（用于导出）
     render(ctx, x, y, width, height) {
-        ctx.drawImage(this.canvas, x, y, width, height);
+        // 创建导出用的Canvas
+        const exportCanvas = this.createExportCanvas();
+
+        // 绘制到目标上下文
+        ctx.drawImage(exportCanvas, x, y, width, height);
 
         console.log(`渲染书签 ${this.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
     }
@@ -565,8 +626,8 @@ class BookmarkManager {
                     reopenCropBtn.style.display = 'block';
                 }
 
-                // 重新渲染书签
-                bookmark.initCanvas();
+                // 更新书签预览
+                bookmark.updatePreview();
 
                 // 获取背景板尺寸
                 let boardWidth = 400;
@@ -846,8 +907,8 @@ class BookmarkManager {
                 reopenCropBtn.style.display = 'block';
             }
 
-            // 重新渲染书签
-            bookmark.initCanvas();
+            // 更新书签预览
+            bookmark.updatePreview();
 
             // 获取背景板尺寸
             let boardWidth = 400;
@@ -920,8 +981,8 @@ class BookmarkManager {
             opacity: bookmark.background.imageOpacity
         });
 
-        // 重新渲染书签
-        bookmark.initCanvas();
+        // 更新书签预览
+        bookmark.updatePreview();
 
         // 获取背景板尺寸
         let boardWidth = 400;
@@ -1118,8 +1179,8 @@ class BookmarkManager {
 
         this.bookmarks.push(bookmark);
 
-        // 初始化书签Canvas
-        bookmark.initCanvas();
+        // 更新书签预览
+        bookmark.updatePreview();
 
         // 设置书签位置
         if (this.boardContainer) {
@@ -1340,10 +1401,10 @@ class BookmarkManager {
             console.log(`背景板尺寸: ${boardWidth}x${boardHeight}`);
         }
 
-        // 更新每个书签的Canvas和位置
+        // 更新每个书签的预览和位置
         for (const bookmark of this.bookmarks) {
-            // 更新Canvas内容
-            bookmark.initCanvas();
+            // 更新预览内容
+            bookmark.updatePreview();
 
             // 更新DOM元素位置
             bookmark.setPosition(boardWidth, boardHeight);
@@ -1598,6 +1659,8 @@ class BookmarkManager {
 
     // 渲染所有书签到导出Canvas
     renderToExportCanvas(ctx, boardWidth, boardHeight) {
+        console.log(`开始导出书签，背景板尺寸: ${boardWidth}x${boardHeight}`);
+
         // 遍历所有书签
         for (const bookmark of this.bookmarks) {
             // 计算书签在背景板中的位置
@@ -1607,6 +1670,7 @@ class BookmarkManager {
             const { width, height } = bookmark.getScaledDimensions();
 
             // 绘制书签内容到导出Canvas
+            // 这里会调用 bookmark.render 方法，该方法会创建临时Canvas并绘制
             bookmark.render(ctx, x, y, width, height);
 
             console.log(`导出书签 ${bookmark.id}，位置: (${x}, ${y}), 尺寸: ${width}x${height}`);
