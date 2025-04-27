@@ -88,29 +88,29 @@ class BackgroundManager {
         this.setBackgroundType(data.type);
 
         // 更新纯色背景设置
-        this.bgColorInput.value = data.color;
+        if (this.bgColorInput) this.bgColorInput.value = data.color;
 
         // 更新渐变背景设置
-        this.gradientTypeSelect.value = data.gradient.type;
-        this.gradientAngleInput.value = data.gradient.angle;
-        this.gradientAngleValue.textContent = `${data.gradient.angle}°`;
+        if (this.gradientTypeSelect) this.gradientTypeSelect.value = data.gradient.type;
+        if (this.gradientAngleInput) this.gradientAngleInput.value = data.gradient.angle;
+        if (this.gradientAngleValue) this.gradientAngleValue.textContent = `${data.gradient.angle}°`;
 
         // 更新渐变色标
         this.updateGradientStops(data.gradient.stops);
 
         // 更新图片背景设置
-        this.imageRepeatSelect.value = data.imageRepeat;
-        this.imageOpacityInput.value = data.imageOpacity;
-        this.imageOpacityValue.textContent = `${data.imageOpacity}%`;
+        if (this.imageRepeatSelect) this.imageRepeatSelect.value = data.imageRepeat;
+        if (this.imageOpacityInput) this.imageOpacityInput.value = data.imageOpacity;
+        if (this.imageOpacityValue) this.imageOpacityValue.textContent = `${data.imageOpacity}%`;
 
         // 更新几何图案设置
-        this.patternTypeSelect.value = data.pattern.type;
-        this.patternColor1Input.value = data.pattern.color1;
-        this.patternColor2Input.value = data.pattern.color2;
-        this.patternSizeInput.value = data.pattern.size;
-        this.patternSizeValue.textContent = `${data.pattern.size}px`;
-        this.patternAngleInput.value = data.pattern.angle;
-        this.patternAngleValue.textContent = `${data.pattern.angle}°`;
+        if (this.patternTypeSelect) this.patternTypeSelect.value = data.pattern.type;
+        if (this.patternColor1Input) this.patternColor1Input.value = data.pattern.color1;
+        if (this.patternColor2Input) this.patternColor2Input.value = data.pattern.color2;
+        if (this.patternSizeInput) this.patternSizeInput.value = data.pattern.size;
+        if (this.patternSizeValue) this.patternSizeValue.textContent = `${data.pattern.size}px`;
+        if (this.patternAngleInput) this.patternAngleInput.value = data.pattern.angle;
+        if (this.patternAngleValue) this.patternAngleValue.textContent = `${data.pattern.angle}°`;
     }
 
     // 设置背景类型
@@ -122,10 +122,11 @@ class BackgroundManager {
 
         // 显示对应的设置面板
         this.bgSettings.forEach(panel => {
-            panel.style.display = 'none';
+            if(panel) panel.style.display = 'none';
         });
 
-        document.getElementById(`${type}-settings`).style.display = 'block';
+        const settingsPanel = document.getElementById(`${type}-settings`);
+        if(settingsPanel) settingsPanel.style.display = 'block';
 
         // 更新背景图层数据
         if (this.backgroundLayer) {
@@ -142,6 +143,7 @@ class BackgroundManager {
     updateGradientStops(stops) {
         // 清除现有色标
         const gradientColors = document.querySelector('.gradient-colors');
+        if (!gradientColors) return;
         gradientColors.innerHTML = '';
 
         // 添加色标

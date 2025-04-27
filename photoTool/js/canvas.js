@@ -698,6 +698,11 @@ class BookmarkCanvas {
             bookmark.position.y = 0;
         }
 
+        // 通知书签管理器更新布局
+        if (this.bookmarkManager) {
+            this.bookmarkManager.updateLayout();
+        }
+
         // 重新渲染Canvas
         this.render();
 
