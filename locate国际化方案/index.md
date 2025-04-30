@@ -30,38 +30,7 @@
 ```
 
 #### 1.2 语言资源获取方式
-
-##### 1. 静态导入
-
-将所有语言包直接打包到应用中，一次性加载：
-
-```javascript
-import enTranslations from './locales/en.json';
-import jaTranslations from './locales/ja.json';
-import zhTranslations from './locales/zh.json';
-
-const i18nInstance = i18n.createInstance({
-  resources: {
-    en: { translation: enTranslations },
-    ja: { translation: jaTranslations },
-    zh: { translation: zhTranslations }
-  },
-  fallbackLng: 'en'
-});
-```
-
-**适用场景**：
-- 语言数量少（2-3种）
-- 翻译内容总量较小
-- 需要离线使用的应用
-
-**优缺点**：
-- ✅ 初次加载后无需额外网络请求
-- ✅ 语言切换速度快
-- ❌ 增加初始包体积
-- ❌ 更新翻译需重新部署应用
-
-##### 2. 动态加载
+##### 1. 动态加载
 
 根据用户选择的语言按需加载对应资源文件：
 
@@ -210,54 +179,6 @@ export default {
   }
 }
 </script>
-```
-
-#### 2.3 原生JavaScript项目实现 (使用i18next)
-
-```javascript
-// 1. 初始化i18next
-i18next
-  .init({
-    lng: localStorage.getItem('language') || 'en',
-    resources: {
-      en: {
-        translation: {
-          welcome: 'Welcome to our website',
-          items_one: '{{count}} item',
-          items_other: '{{count}} items'
-        }
-      },
-      ja: {
-        translation: {
-          welcome: 'ウェブサイトへようこそ',
-          items_one: '{{count}} 項目',
-          items_other: '{{count}} 項目'
-        }
-      }
-    }
-  })
-  .then(updateContent);
-
-// 2. 查找并更新需要国际化的元素
-function updateContent() {
-  document.querySelectorAll('[data-i18n]').forEach(element => {
-    const key = element.getAttribute('data-i18n');
-    
-    // 检查是否有参数
-    if (element.hasAttribute('data-i18n-params')) {
-      const params = JSON.parse(element.getAttribute('data-i18n-params'));
-      element.textContent = i18next.t(key, params);
-    } else {
-      element.textContent = i18next.t(key);
-    }
-  });
-}
-
-// 3. 语言切换
-document.getElementById('language-selector').addEventListener('change', (e) => {
-  i18next.changeLanguage(e.target.value).then(updateContent);
-  localStorage.setItem('language', e.target.value);
-});
 ```
 
 ### 3. 高级优化策略
