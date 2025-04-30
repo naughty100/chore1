@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>书签卡片编辑器</title>
+    <!-- <title>书签卡片编辑器</title> -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="app-container">
-        <header class="app-header">
+        <!-- <header class="app-header">
             <h1>书签卡片编辑器</h1>
             <div class="header-actions">
                 <button id="exportBtn" class="btn primary">导出书签</button>
             </div>
-        </header>
+        </header> -->
 
         <main class="app-main">
             <!-- 左侧编辑器面板 - 专注于背景板和书签的展示 -->
             <div class="editor-panel">
                 <div class="background-board">
                     <!-- 这里将放置书签DOM元素 -->
-                    <div class="canvas-container" style="display: none;">
+                    <div class="canvas-container"></div>
+                    <!-- <div class="canvas-container" style="display: none;">
                         <canvas id="bookmarkCanvas" width="200" height="600">
                             您的浏览器不支持HTML5 Canvas元素
                         </canvas>
@@ -29,7 +30,7 @@
                             <span id="zoomLevel">100%</span>
                             <button id="zoomOutBtn" class="btn small">-</button>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
@@ -37,6 +38,7 @@
             <div class="controls-panel">
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="bookmarks">书签</button>
+                    <button class="tab-btn" data-tab="bookmarks-bg">书签背景</button>
                     <button class="tab-btn" data-tab="board">背景板</button>
                     <button class="tab-btn" data-tab="shadow">阴影</button>
                     <button class="tab-btn" data-tab="position">位置</button>
@@ -162,64 +164,64 @@
                             <input type="range" id="bookmarkScale" min="50" max="150" value="100">
                             <span id="bookmarkScaleValue">100%</span>
                         </div>
+                    </div>
 
-                        <!-- 书签背景设置 -->
-                        <div class="bookmark-background-settings">
-                            <h3>书签背景</h3>
+                    <!-- 书签背景设置 -->
+                    <div class="tab-pane" id="bookmarks-bg-tab" class="bookmark-background-settings">
+                        <h3>书签背景</h3>
 
-                            <!-- 图片背景设置 -->
-                            <div class="control-group">
-                                <label for="bgImage">选择背景图片</label>
-                                <input type="file" id="bgImage" accept="image/*">
-                            </div>
+                        <!-- 图片背景设置 -->
+                        <div class="control-group">
+                            <label for="bgImage">选择背景图片</label>
+                            <input type="file" id="bgImage" accept="image/*">
+                        </div>
 
-                            <!-- 图片区域选择 -->
-                            <div class="control-group" id="imageCropContainer" style="display: none;">
-                                <label>选择区域</label>
-                                <div class="image-crop-wrapper">
-                                    <div class="image-crop-area">
-                                        <img id="cropPreviewImage" src="" alt="预览图">
-                                        <div id="cropSelection" class="crop-selection"></div>
-                                    </div>
-                                </div>
-                                <div class="crop-controls">
-                                    <button id="applyCropBtn" class="btn small">应用选区</button>
-                                    <button id="resetCropBtn" class="btn small">重置选区</button>
+                        <!-- 图片区域选择 -->
+                        <div class="control-group" id="imageCropContainer" style="display: none;">
+                            <label>选择区域</label>
+                            <div class="image-crop-wrapper">
+                                <div class="image-crop-area">
+                                    <img id="cropPreviewImage" src="" alt="预览图">
+                                    <div id="cropSelection" class="crop-selection"></div>
                                 </div>
                             </div>
-
-                            <div class="control-group">
-                                <button id="reopenCropBtn" class="btn small" style="display: none;">重新裁剪图片</button>
+                            <div class="crop-controls">
+                                <button id="applyCropBtn" class="btn small">应用选区</button>
+                                <button id="resetCropBtn" class="btn small">重置选区</button>
                             </div>
+                        </div>
 
-                            <div class="control-group">
-                                <label for="imageRepeat">平铺方式</label>
-                                <select id="imageRepeat">
-                                    <option value="no-repeat" selected>不平铺</option>
-                                    <option value="repeat">平铺</option>
-                                    <option value="repeat-x">水平平铺</option>
-                                    <option value="repeat-y">垂直平铺</option>
-                                </select>
-                            </div>
+                        <div class="control-group">
+                            <button id="reopenCropBtn" class="btn small" style="display: none;">重新裁剪图片</button>
+                        </div>
 
-                            <div class="control-group">
-                                <label for="imageFit">适应方式</label>
-                                <select id="imageFit">
-                                    <option value="contain">包含全图</option>
-                                    <option value="cover" selected>填满书签</option>
-                                    <option value="center">居中显示</option>
-                                </select>
-                            </div>
+                        <div class="control-group">
+                            <label for="imageRepeat">平铺方式</label>
+                            <select id="imageRepeat">
+                                <option value="no-repeat" selected>不平铺</option>
+                                <option value="repeat">平铺</option>
+                                <option value="repeat-x">水平平铺</option>
+                                <option value="repeat-y">垂直平铺</option>
+                            </select>
+                        </div>
 
-                            <div class="control-group">
-                                <label for="imageOpacity">不透明度</label>
-                                <input type="range" id="imageOpacity" min="0" max="100" value="100">
-                                <span id="imageOpacityValue">100%</span>
-                            </div>
+                        <div class="control-group">
+                            <label for="imageFit">适应方式</label>
+                            <select id="imageFit">
+                                <option value="contain">包含全图</option>
+                                <option value="cover" selected>填满书签</option>
+                                <option value="center">居中显示</option>
+                            </select>
+                        </div>
 
-                            <div class="control-group">
-                                <button id="extractColorsBtn" class="btn">从图片提取颜色到背景板</button>
-                            </div>
+                        <div class="control-group">
+                            <label for="imageOpacity">不透明度</label>
+                            <input type="range" id="imageOpacity" min="0" max="100" value="100">
+                            <span id="imageOpacityValue">100%</span>
+                        </div>
+
+                        <div class="control-group">
+                            <button id="extractColorsBtn" class="btn">从图片提取颜色到背景板</button>
                         </div>
                     </div>
 
