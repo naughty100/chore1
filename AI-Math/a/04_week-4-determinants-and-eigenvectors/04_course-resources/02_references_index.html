@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+  <head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.ico" type="image/vnd.microsoft.icon">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <title>JSXGraph - JSXGraph</title>
+
+  <meta name="author" content="JSXGraph team" />
+
+  
+  <meta name="description" content="Dynamic Mathematics with JavaScript">
+  
+
+  <link rel="alternate" type="application/rss+xml" title="JSXGraph - Interactive Geometry, plotting, visualization" href="/wp/feed.xml" />
+
+  <link rel="stylesheet" href="/distrib/jsxgraph.css" />
+  <!--<script type="text/javascript" charset="UTF-8" src="//cdnjs.cloudflare.com/ajax/libs/jsxgraph/1.5.0/jsxgraphcore.js"></script>-->
+  <script type="text/javascript" charset="UTF-8" src="/distrib/jsxgraphcore.js"></script>
+
+  <!--
+  <link rel="stylesheet" href="//jsxgraph.uni-bayreuth.de/~alfred/jsxgraph/distrib/jsxgraph.css" />
+  <script type="text/javascript" src="//jsxgraph.uni-bayreuth.de/~alfred/jsxgraph/distrib/jsxgraphcore.js"></script>
+  -->
+
+  <!-- TODO hardcode the required JS because on 2016-02-01 GitHub pages migrated to jekyll 3 and broke this template -->
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="/wp/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/wp/css/main.css" />
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" />
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto" >
+  <!--link rel="stylesheet" href="/css/index.css" />-->
+  <!-- end TODO -->
+
+  
+    
+      <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" />
+    
+  
+
+  
+    
+      <link rel="stylesheet" href="/wp/css/bootstrap.min.css" />
+    
+      <link rel="stylesheet" href="/wp/css/main.css" />
+    
+  
+
+  
+    
+	  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" />
+    
+	  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+    
+  
+
+  
+
+  
+
+  
+
+  <!-- Facebook OpenGraph tags -->
+  <meta property="og:title" content="JSXGraph" />
+  <meta property="og:type" content="website" />
+
+  
+  <meta property="og:url" content="http://jsxgraph.org/" />
+  
+
+  
+  <meta property="og:image" content="http://jsxgraph.org/img/logo_tw.png" />
+  
+
+</head>
+
+
+  <body>
+  
+    <nav class="navbar navbar-default navbar-fixed-top navbar-custom">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#main-navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/wp">JSXGraph</a>
+    </div>
+
+    <div class="collapse navbar-collapse" id="main-navbar">
+      <ul class="nav navbar-nav navbar-right">
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="https://jsxgraph.org/docs/index.html">API Reference</a>
+	      </li>
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="/wp/about/index.html">Examples</a>
+	      </li>
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="/wp/download/index.html">Download</a>
+	      </li>
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="/wp/docs/index.html">Docs</a>
+	      </li>
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="/wp/ref/index.html">References</a>
+	      </li>
+	    
+	      
+	      
+        <li>
+          
+          
+
+        
+
+	      <a href="/wp/blog/index.html">Blog</a>
+	      </li>
+	    
+      </ul>
+    </div>
+
+	
+	<div class="avatar-container">
+	  <div class="avatar-img-border">
+	    <a href="/wp">
+	      <img class="avatar-img" src="/wp/img/logo_tw.png" />
+		</a>
+	  </div>
+	</div>
+	
+
+  </div>
+</nav>
+
+
+    <div role="main" class="container main-content">
+        <!-- Html Elements for Search -->
+        <div id="search-container" class="alert">
+            <ul id="results-container"></ul>
+            <input type="text" id="search-input" placeholder="search..." class="form-control">
+        </div>
+        
+      
+<header class="header-page">
+  <div class="row">
+    <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+	  <div class="page-heading">
+		<!--<h1>JSXGraph</h1>-->
+		<h1><img src="img/jsxgraph_1_0.png" /></h1>
+		<h2>v1.5.0</h2>
+	    
+	    <hr class="small">
+	    <span class="page-subheading">Dynamic Mathematics with JavaScript</span>
+	    
+	  </div>
+    </div>
+  </div>
+</header>
+
+
+
+<div class="row">
+  <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1 jumbotron text-center">
+    <h3>Interactive geometry, plotting, visualization</h3>
+    <p>
+        JSXGraph is a cross-browser JavaScript library for interactive geometry,
+        function plotting, charting, and data visualization in the web browser.
+    </p>
+
+    <h3>New</h3>
+    <ul>
+      <li><a href="/share/">Examples database</a> (new in 2023)</li>
+    </ul>
+    <h3>Upcoming events:</h3>
+    <div style="text-align: left;">
+    <ul>
+      <li><a href="/conf2023">4. International JSXGraph conference, 10.-12. October 2023 (free online conference)</a></li>
+    </ul>
+    </div>
+    <h3>Past events:</h3>
+    <div style="text-align: left;">
+    <ul>
+    <li> Free hybrid workshop <strong>Using JSX graphs in STACK</strong>, December 8, 2022, University of Edinburgh.
+    <a href="https://stack-assessment.org/Events/2022-12-08-JSXgraphSTACK/">Workshop homepage</a></li>
+    <!--
+        <li><strong>Next Webinar:
+            <a href="/wp/2021-06-01-webinar-7/">
+            advanced JSXGraph programming vol 7 (online)
+            </a>:</strong> 9. June 2021, 4 pm CEST (Central European Summer Time, UTC +2)</li>
+        <li><strong>Online Teacher Training Course on Programming JSXGraph</strong> May 26th - June 9th, 2021. <a href="https://forms.gle/gmDg2iqh1MDZM39u8">(free) registration</a></li>
+    <li><strong>3rd JSXGraph conference 2022</strong>
+      October 4th - 6th, 2022 (online, free) <a href="/conf2022/">conference home page</a>.</li>
+    -->
+  </ul>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+ <!--<div class="col-12 cont">-->
+<div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1 nopadding text-center">
+  <div class="col-sm-3 col-xs-6 text-center mybox">
+    <a href="https://jsfiddle.net/k60dprL4/" title="jsfiddle">
+            <span class="fa-stack fa-lg icon">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-jsfiddle fa-stack-1x fa-inverse"></i>
+      </span>
+    <h4>jsfiddle</h4>
+    get started quickly
+    </a>
+  </div>
+
+  <div class="col-sm-3 col-xs-6 text-center mybox">
+    <a href="https://groups.google.com/forum/#!forum/jsxgraph" title="Google groups">
+      <span class="fa-stack fa-lg icon">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-google fa-stack-1x fa-inverse"></i>
+      </span>
+    <h4>Google Groups</h4>
+    structural questions
+    </a>
+  </div>
+
+  <div class="col-sm-3 col-xs-6 text-center mybox">
+    <a href="https://github.com/jsxgraph" title="GitHub">
+      <span class="fa-stack fa-lg icon">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+      </span>
+      <h4>GitHub</h4>
+  requests &   bugreports
+    </a>
+  </div>
+
+
+
+  <div class="col-sm-3 col-xs-6 text-center mybox">
+    <a href="https://stackoverflow.com/search?tab=newest&q=jsxgraph" title="StackOverflow">
+      <span class="fa-stack fa-lg icon">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-stack-overflow fa-stack-1x fa-inverse"></i>
+      </span>
+    <h4>StackOverflow</h4>
+    coding questions
+    </a>
+  </div>
+
+</div>
+</div>
+
+
+<div class="row">
+  <div class="col-lg-6 col-lg-offset-1 col-md-6 col-md-offset-1">
+    <h4>Features</h4>
+    <ul>
+        <li> Euclidean and projective Geometry</li>
+        <li> Curve plotting</li>
+        <li> Open source</li>
+        <li> High-performance</li>
+        <li> Small footprint </li>
+        <li> No dependencies</li>
+        <li> Multi-touch support</li>
+        <li> Backward compatible down to IE 6</li>
+    </ul>
+    <p>
+    JSXGraph is implemented in pure JavaScript, does not rely on any other library,
+    and uses SVG, VML, or canvas.
+    Special care has been taken to optimize the performance.
+
+
+    <!-- <p>
+    The new interactive geometry software sketchometry is based on JSXGraph.
+    -->
+    </p>
+  </div>
+  <div class="col-lg-4 col-md-4">
+    <h4>Examples</h4>
+    <div id='box2' class='jxgbox' style='width:320px; height:320px;'></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 col-lg-offset-1 col-md-6 col-md-offset-1">
+    <h4>License</h4>
+    <p>
+    JSXGraph is released under the
+    <a href="http://www.gnu.org/licenses/licenses.html#LGPL" target="_blank">LGPL
+        &#8211; Lesser GNU General Public License</a> &#8211;
+    or the
+    <a href="https://github.com/jsxgraph/jsxgraph/blob/master/LICENSE.MIT" target="_blank">MIT license</a>.
+    </p>
+  </div>
+  <div class="col-lg-4 col-md-4">
+    <div id='box' class='jxgbox' style='width:320px; height:320px;'></div>
+    <p><a href="/wiki/index.php/Category:Examples">More examples ...</a></p>
+  </div>
+</div> <!-- row -->
+<br>
+
+<script type='text/javascript'>
+(function(){
+    var brd = JXG.JSXGraph.initBoard('box', {boundingbox: [-3, 3, 3, -3]});
+    solveQ2 = function(x1,x2,x3,off) {
+        var a, b, c, d;
+        a = 0.5;
+        b = -(x1+x2+x3);
+        c = x1*x1+x2*x2+x3*x3-0.5*(x1+x2+x3)*(x1+x2+x3)-off;
+        d = b*b-4*a*c;
+        if (Math.abs(d)<0.00000001) d = 0.0;
+        return [(-b+Math.sqrt(d))/(2.0*a),(-b-Math.sqrt(d))/(2.0*a)];
+    }
+
+    a = brd.create('line',[[0,0],[2,0]],{straightFirst:false,straightLast:false,visible:false});
+    p0 = brd.create('point',[0,0],{name:'',visible:false});
+    p1 = brd.create('glider',[1.3,0,a],{name:'drag me'});
+
+    b0 = -0.5;
+    r1 = 2-p1.X();
+    b1 = 1.0/r1;
+    r2 = (2.0-r1);
+    b2 = 1.0/r2;
+
+    p2 = brd.create('point',[function(){return p1.X()-2;},0],{name:'',visible:false});
+
+    c0 = brd.create('circle',[p0,Math.abs(1.0/b0)],{strokeWidth:1,withLabel:false});
+    c1 = brd.create('circle',[p1,function(){return 2-p1.X();}],{strokeWidth:1,withLabel:false});
+    c2 = brd.create('circle',[p2,function(){return p1.X();}],{strokeWidth:1,withLabel:false});
+    c0.curvature = function(){ return b0;}; // constant
+    c1.curvature = function(){ return 1/(2-p1.X());};
+    c2.curvature = function(){ return 1/(p1.X());};
+
+    thirdCircleX = function() {
+        var b0,b1,b2,x0,x1,x2, b3,bx3;
+        b0 = c0.curvature();
+        b1 = c1.curvature();
+        b2 = c2.curvature();
+        x0 = c0.midpoint.X();
+        x1 = c1.midpoint.X();
+        x2 = c2.midpoint.X();
+
+        b3 = solveQ2(b0,b1,b2,0);
+        bx3 = solveQ2(b0*x0,b1*x1,b2*x2,2);
+        return bx3[0]/b3[0];
+    }
+    thirdCircleY = function() {
+        var b0,b1,b2,y0,y1,y2, b3,by3;
+        b0 = c0.curvature();
+        b1 = c1.curvature();
+        b2 = c2.curvature();
+        y0 = c0.midpoint.Y();
+        y1 = c1.midpoint.Y();
+        y2 = c2.midpoint.Y();
+
+        b3 = solveQ2(b0,b1,b2,0);
+        by3 = solveQ2(b0*y0,b1*y1,b2*y2,2);
+        return by3[0]/b3[0];
+    }
+    thirdCircleRadius = function() {
+        var b0,b1,b2, b3,bx3,by3;
+        b0 = c0.curvature();
+        b1 = c1.curvature();
+        b2 = c2.curvature();
+        b3 = solveQ2(b0,b1,b2,0);
+        return 1.0/b3[0];
+    }
+
+    p3 = brd.create('point',[thirdCircleX,thirdCircleY],{name:'',visible:false});
+    c3 = brd.create('circle',[p3,thirdCircleRadius],{strokeWidth:1,withLabel:false});
+    c3.curvature = function(){ return 1.0/this.radius;};
+
+    otherCirc = function(circs,level) {
+        var p,c, fx,fy,fr;
+        if (level<=0) return;
+        fx = function() {
+            var b,x,i;
+            b = [];
+            x = [];
+            for (i=0;i<4;i++) {
+                b[i] = circs[i].curvature();
+                x[i] = circs[i].midpoint.X();
+            }
+
+            b[4] = 2*(b[0]+b[1]+b[2])-b[3];
+            x[4] = (2*(b[0]*x[0]+b[1]*x[1]+b[2]*x[2])-b[3]*x[3])/b[4];
+            return x[4];
+        }
+        fy = function() {
+            var b,y,i;
+            b = [];
+            y = [];
+            for (i=0;i<4;i++) {
+                b[i] = circs[i].curvature();
+                y[i] = circs[i].midpoint.Y();
+            }
+
+            b[4] = 2*(b[0]+b[1]+b[2])-b[3];
+            y[4] = (2*(b[0]*y[0]+b[1]*y[1]+b[2]*y[2])-b[3]*y[3])/b[4];
+            return y[4];
+        }
+        fr = function() {
+            var b,i;
+            b = [];
+            for (i=0;i<4;i++) {
+                b[i] = circs[i].curvature();
+            }
+            b[4] = 2*(b[0]+b[1]+b[2])-b[3];
+            if (isNaN(b[4])) {
+                return 1000.0;
+            } else {
+                return 1/b[4];
+            }
+        }
+        p = brd.create('point',[fx,fy],{name:'',visible:false});
+        c = brd.create('circle',[p,fr],{strokeWidth:1,
+                   fillColor:JXG.hsv2rgb((70*level)%360,0.9,0.8),highlightFillColor:JXG.hsv2rgb((70*level)%360,0.9,0.6),fillOpacity:0.7,withLabel:false});
+        c.curvature = function(){ return 1/this.radius;};
+
+        // Recursion
+        otherCirc([circs[0],circs[1],c,circs[2]],level-1);
+        otherCirc([circs[0],circs[2],c,circs[1]],level-1);
+        otherCirc([circs[1],circs[2],c,circs[0]],level-1);
+        return c;
+    }
+
+    //-------------------------------------------------------
+    brd.suspendUpdate();
+    level = 3;
+    otherCirc([c0,c1,c2,c3],level);
+    otherCirc([c3,c1,c2,c0],level);
+    otherCirc([c0,c2,c3,c1],level);
+    otherCirc([c0,c1,c3,c2],level);
+    brd.unsuspendUpdate();
+})();
+
+// Euler line
+(function () {
+
+    var board = JXG.JSXGraph.initBoard('box2', {boundingbox: [-1.5, 2, 1.5, -1], keepaspectratio:true});
+
+    var cerise = {
+            strokeColor: '#901B77',
+            fillColor: '#CA147A'
+        },
+
+        grass = {
+            strokeColor: '#009256',
+            fillColor: '#65B72E',
+            visible: true,
+            withLabel: true
+        },
+
+        perpendicular = {
+            strokeColor: 'black',
+            dash: 1,
+            strokeWidth: 1,
+            point: JXG.deepCopy(cerise, {
+                visible: true,
+                withLabel: true
+            })
+        },
+
+        median = {
+            strokeWidth: 1,
+            strokeColor: '#333333',
+            dash:2
+        },
+
+        A = board.create('point', [1, 0], cerise),
+        B = board.create('point', [-1, 0], cerise),
+        C = board.create('point', [0.2, 1.5], cerise),
+        pol = board.create('polygon',[A,B,C], {
+            fillColor: '#FFFF00',
+            lines: {
+                strokeWidth: 2,
+                strokeColor: '#009256'
+            }
+        });
+
+    var pABC, pBCA, pCAB, i1;
+    perpendicular.point.name = 'H_c';
+    pABC = board.create('perpendicular', [pol.borders[0], C], perpendicular);
+    perpendicular.point.name = 'H_a';
+    pBCA = board.create('perpendicular', [pol.borders[1], A], perpendicular);
+    perpendicular.point.name = 'H_b';
+    pCAB = board.create('perpendicular', [pol.borders[2], B], perpendicular);
+    grass.name = 'H';
+    i1 = board.create('intersection', [pABC, pCAB, 0], grass);
+
+    var mAB, mBC, mCA;
+    cerise.name = 'M_c';
+    mAB = board.create('midpoint', [A, B], cerise);
+    cerise.name = 'M_a';
+    mBC = board.create('midpoint', [B, C], cerise);
+    cerise.name = 'M_b';
+    mCA = board.create('midpoint', [C, A], cerise);
+
+    var ma, mb, mc, i2;
+    ma = board.create('segment', [mBC, A], median);
+    mb = board.create('segment', [mCA, B], median);
+    mc = board.create('segment', [mAB, C], median);
+    grass.name = 'S';
+    i2 = board.create('intersection', [ma, mc, 0], grass);
+
+    var c;
+    grass.name = 'U';
+    c = board.create('circumcircle',[A, B, C], {
+        strokeColor: '#000000',
+        dash: 3,
+        strokeWidth: 1,
+        center: grass
+    });
+
+    var euler;
+    euler = board.create('line', [i1, i2], {
+        strokeWidth: 2,
+        strokeColor:'#901B77'
+    });
+    board.update();
+})();
+</script>
+
+
+    </div>
+
+    <footer>
+  <div class="container beautiful-jekyll-footer">
+    <div class="row">
+      <div class="col-lg-12  col-md-12">
+        <ul class="list-inline text-center footer-links">
+          
+          
+          <li>
+            <a href="https://github.com/jsxgraph" title="GitHub">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+		  
+		  
+          <li>
+            <a href="mailto:alfred.wassermann@uni-bayreuth.de" title="Email me">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-envelope fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+		  
+		  
+          <li>
+            <!--<a href="https://stackoverflow.com/users/3336514/alfred-wassermann" title="StackOverflow">-->
+            <a href="https://stackoverflow.com/search?tab=newest&q=jsxgraph" title="StackOverflow">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-stack-overflow fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li>
+            <a href="https://groups.google.com/forum/#!forum/jsxgraph" title="Google groups">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-google fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+		  
+		  <li>
+			<a href="/wp/feed.xml" title="RSS">
+			  <span class="fa-stack fa-lg">
+				<i class="fa fa-circle fa-stack-2x"></i>
+				<i class="fa fa-rss fa-stack-1x fa-inverse"></i>
+			  </span>
+			</a>
+		  </li>
+          
+
+          <li>
+            <a href="https://www.erasmusplus.de/"><img src="/wp/img/eu_flag_co_funded_pos_rgb_left.jpg" title="ERASMUS+" alt="ERASMUS+" height=60>
+          </li>
+          <li>
+            <a href="https://itemspro.eu/"><img src="/wp/img/items_logo_blue.gif" alt="ITEMS project" title="ITEMS project" height=60>
+          </li>
+        </ul>
+        <!--
+        <p class="copyright text-muted">
+		  JSXGraph team
+		  &nbsp;&bull;&nbsp;
+		  2023
+
+		  
+		  &nbsp;&bull;&nbsp;
+		  <a href="http://jsxgraph.org">jsxgraph.org</a>
+		  
+	    </p>
+	      <p>
+		      <center>
+	      <a href="https://itemspro.eu/"><img src="/img/items_logo_blue.gif" alt="ITEMS project" title="ITEMS project" height=60>
+	      <a href="https://www.erasmusplus.de/"><img src="/img/eu_flag_co_funded_pos_rgb_left.jpg" title="ERASMUS+" alt="ERASMUS+" height=60>
+		      </center>
+	      </p>
+        <p class="theme-by text-muted">
+    <a href="http://mobiles-lernen.uni-bayreuth.de/">Center for Mobile Learning with Digital Technology</a> &#8211;
+    <a href="//www.uni-bayreuth.de">Universität Bayreuth</a> &#8211;
+    Universitätsstr. 30,
+    95447 Bayreuth,
+    Germany &#8211;
+    Phone: +49921553266 &#8211; Fax: +49921552161
+        </p>
+
+        <!-- Please don't remove this, keep my open source work credited :) -->
+    <p class="theme-by text-muted">
+      Theme by
+      <a href="http://deanattali.com/beautiful-jekyll/">beautiful-jekyll</a>
+    </p>
+
+      </div>
+    </div>
+  </div>
+</footer>
+
+  
+    <!-- TODO hardcode the required JS because on 2016-02-01 GitHub pages migrated to jekyll 3 and broke this template -->
+<script src="/wp/js/jquery-1.11.2.min.js"></script>
+<script src="/wp/js/bootstrap.min.js"></script>
+<script src="/wp/js/main.js"></script>
+<!-- end TODO -->
+
+
+
+
+
+
+
+
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script>
+      	if (typeof jQuery == 'undefined') {
+      	  document.write('<script src="/wp/js/jquery-1.11.2.min.js"></scr' + 'ipt>');
+      	}
+      </script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+	<script src="/wp/js/bootstrap.min.js"></script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+	<script src="/wp/js/main.js"></script>
+    
+  
+
+
+
+
+  
+  </body>
+
+  <!-- Script pointing to jekyll-search.js -->
+  <script src="/wp/js/jekyll-search.min.js" type="text/javascript"></script>
+  <script type="text/javascript">SimpleJekyllSearch({
+    searchInput: document.getElementById('search-input'),
+    resultsContainer: document.getElementById('results-container'),
+    json: '/wp/search.json',
+    noResultsText: ''
+    }); 
+  </script>
+  
+  
+</html>
